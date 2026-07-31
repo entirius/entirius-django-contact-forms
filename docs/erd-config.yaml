@@ -1,0 +1,21 @@
+app_label: django_contact_forms
+groups:
+  - name: contact-forms
+    title: "Contact Forms"
+    models:
+      - Channel
+      - ContactForm
+      - ContactFormAttachment
+      - APIKey
+      - FormType
+      - FormNotificationConfig
+  - name: bookings-and-leads
+    title: "Bookings, Leads & Google Ads"
+    models:
+      - ContactFormsSettings
+      - BookingConfig
+      - Booking
+      - Lead
+      - LeadCreationRule
+      - GoogleAdsConfig
+      - OfflineConversionQueue

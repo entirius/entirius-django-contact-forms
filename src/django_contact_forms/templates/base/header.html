@@ -1,0 +1,5 @@
+{# Fallback header — used when django-email is not in INSTALLED_APPS.
+   django-email ships its own branded base/header.html; Django's template
+   loader picks that one first when the module is active, so this file is
+   the silent degradation path for isolated installs (module-only tests,
+   services that don't use branded email). Intentionally blank. #}

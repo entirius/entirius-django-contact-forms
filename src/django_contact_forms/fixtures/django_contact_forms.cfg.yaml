@@ -1,0 +1,187 @@
+# Seed data for django-contact-forms module (dev environment)
+# Load via: python manage.py loaddata django_contact_forms.cfg
+
+# Channels
+- model: django_contact_forms.channel
+  pk: 1
+  fields:
+    idx: default-europe
+    label: Default Europe
+    admin_email: admin@example.com
+    default_language: null
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+- model: django_contact_forms.channel
+  pk: 2
+  fields:
+    idx: default-us
+    label: Default US
+    admin_email: admin-us@example.com
+    default_language: null
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+# API Keys (SHA256 hashes — use forms-generate-api-key for real keys)
+- model: django_contact_forms.apikey
+  pk: 1
+  fields:
+    channel: 1
+    key: "0000000000000000000000000000000000000000000000000000000000000001"
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+- model: django_contact_forms.apikey
+  pk: 2
+  fields:
+    channel: 2
+    key: "0000000000000000000000000000000000000000000000000000000000000002"
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+# Notification configs (channel-level, type-level override, slug-level disable)
+- model: django_contact_forms.formnotificationconfig
+  pk: 1
+  fields:
+    channel: 1
+    form_type: ""
+    slug: ""
+    send_email: true
+    recipient_email: ""
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+- model: django_contact_forms.formnotificationconfig
+  pk: 2
+  fields:
+    channel: 1
+    form_type: complaint
+    slug: ""
+    send_email: true
+    recipient_email: "complaints@example.com"
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+- model: django_contact_forms.formnotificationconfig
+  pk: 3
+  fields:
+    channel: 2
+    form_type: ""
+    slug: "do-not-email"
+    send_email: false
+    recipient_email: ""
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+# Sample contact form submissions (dev seeding)
+- model: django_contact_forms.contactform
+  pk: "100000000001"
+  fields:
+    email: customer1@example.com
+    channel: 1
+    language: null
+    slug: contact-us
+    type: general
+    code: null
+    body: {"name": "Alice Smith", "message": "I have a question about my order."}
+    created_at: "2025-06-01T10:00:00Z"
+    modified_at: "2025-06-01T10:00:00Z"
+
+- model: django_contact_forms.contactform
+  pk: "100000000002"
+  fields:
+    email: customer2@example.com
+    channel: 1
+    language: null
+    slug: contact-us
+    type: complaint
+    code: "TICKET-42"
+    body: {"name": "Bob Jones", "message": "Product arrived damaged."}
+    created_at: "2025-06-02T14:30:00Z"
+    modified_at: "2025-06-02T14:30:00Z"
+
+- model: django_contact_forms.contactform
+  pk: "100000000003"
+  fields:
+    email: customer3@example.com
+    channel: 2
+    language: null
+    slug: feedback
+    type: feedback
+    code: null
+    body: {"name": "Charlie Lee", "message": "Great service!"}
+    created_at: "2025-06-03T09:15:00Z"
+    modified_at: "2025-06-03T09:15:00Z"
+
+# 2.1.0 — Singleton kill-switches (both off by default; opt-in per deployment)
+- model: django_contact_forms.contactformssettings
+  pk: 1
+  fields:
+    bookings_enabled: false
+    google_ads_enabled: false
+
+# 2.1.0 — Per-channel BookingConfig (disabled — fill in service_account_credentials_path
+# and impersonate_email then flip enabled=true to start accepting bookings)
+- model: django_contact_forms.bookingconfig
+  pk: 1
+  fields:
+    channel: 1
+    enabled: false
+    provider: google_calendar
+    service_account_credentials_path: ""
+    impersonate_email: ""
+    calendar_id: primary
+    slot_duration_minutes: 30
+    days_ahead: 14
+    weekdays_only: true
+    timezone: Europe/Warsaw
+    event_summary_template: "Booking - {name}"
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+# Default working window for the BookingConfig above (9:00-17:00).
+# Replace / extend in admin to support multi-window setups (e.g., 10:00-12:30 + 16:00-17:00).
+- model: django_contact_forms.bookingtimewindow
+  pk: 1
+  fields:
+    booking_config: 1
+    order: 0
+    start_time: "09:00:00"
+    end_time: "17:00:00"
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+# 2.1.0 — Per-channel GoogleAdsConfig (disabled — paste a real refresh token,
+# customer_id, and conversion-action IDs, then flip enabled=true)
+- model: django_contact_forms.googleadsconfig
+  pk: 1
+  fields:
+    channel: 1
+    enabled: false
+    customer_id: ""
+    login_customer_id: ""
+    oauth_refresh_token: ""
+    default_currency_code: EUR
+    meeting_booked_action_id: ""
+    qualified_lead_action_id: ""
+    won_deal_action_id: ""
+    meeting_booked_value: 200
+    qualified_lead_value: 500
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
+
+# 2.1.0 — Sample LeadCreationRule: submissions with form_type=request-a-quote
+# on channel 1 auto-spawn a Lead (source_type=form). Fallback chain identical
+# to FormNotificationConfig: exact (channel, type, slug) → type-level
+# (channel, type, "") → channel-level (channel, "", "") → off. Empty slug here
+# makes it type-level; an exact (channel, type, slug) row would override.
+- model: django_contact_forms.leadcreationrule
+  pk: 1
+  fields:
+    channel: 1
+    form_type: "request-a-quote"
+    slug: ""
+    enabled: true
+    source_type: "form"
+    created_at: "2025-01-01T00:00:00Z"
+    modified_at: "2025-01-01T00:00:00Z"
