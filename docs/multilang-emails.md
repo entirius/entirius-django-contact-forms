@@ -1,22 +1,16 @@
-# Multilang emails
+---
+title: Multilang Emails
+description: How contact-forms emails are routed, translated, and rendered.
+---
 
-How contact-forms emails are routed, translated, and rendered on the
-Volkanos platform. Applies to booking confirmations, booking admin
-notifications, and generic contact-form submissions. The same rules govern
-every module that sends email — accounts, checkout, loyalty, returns,
-allegro, agreements — so once you know this page, you know the whole
-platform's email story.
+How contact-forms emails are routed, translated, and rendered on the Volkanos platform. Applies to booking confirmations, booking admin notifications, and generic contact-form submissions. The same rules govern every module that sends email — accounts, checkout, returns, agreements — so once you know this page, you know the whole platform's email story.
 
 ## TL;DR
 
 - Every email goes through a `django_email.service.EmailService` subclass.
-- `EmailService.__init__(language, channel_idx)` activates Django i18n
-  (`django.utils.translation.activate(language)`), loads branding, and
-  picks a `LangChannelConfig` for per-language header/footer copy.
-- Templates use `{% trans %}` / `{% blocktrans %}` with translations in
-  `django-email/locale/{en,pl,de}/LC_MESSAGES/django.po`.
-- The submitter's language wins for booker-facing emails. Operator-facing
-  emails render in the channel's default language.
+- `EmailService.__init__(language, channel_idx)` activates Django i18n (`django.utils.translation.activate(language)`), loads branding, and picks a `LangChannelConfig` for per-language header/footer copy.
+- Templates use `{% trans %}` / `{% blocktrans %}` with translations in `django-email/locale/{en,pl,de}/LC_MESSAGES/django.po`.
+- The submitter's language wins for booker-facing emails. Operator-facing emails render in the channel's default language.
 
 ## Language resolution chain
 
@@ -42,12 +36,9 @@ platform's email story.
      else                                       →  activate EMAIL_DEFAULT_LANGUAGE
 ```
 
-`EMAIL_AVAILABLE_LANGUAGES` defaults to `["en", "pl"]`.
-`EMAIL_DEFAULT_LANGUAGE` defaults to `"pl"`.
+`EMAIL_AVAILABLE_LANGUAGES` defaults to `["en", "pl"]`. `EMAIL_DEFAULT_LANGUAGE` defaults to `"pl"`.
 
-Pass `None` when you don't know — the service handles the fallback and
-logs the activated language on its ProcessLogger. Never raise 400 for an
-unsupported language; fall back silently.
+Pass `None` when you don't know — the service handles the fallback and logs the activated language on its `ProcessLogger`. Never raise 400 for an unsupported language; fall back silently.
 
 ## Who reads what, in which language
 
@@ -57,9 +48,7 @@ unsupported language; fall back silently.
 | Booking admin notification | Operator | `channel.default_language` |
 | Generic contact-form submission | Operator | `channel.default_language` |
 
-Rationale: a Polish booker expects a Polish confirmation; the sales desk
-configures its inbox locale once per channel and wants every notification
-in that locale regardless of who submitted the form.
+Rationale: a Polish booker expects a Polish confirmation; the sales desk configures its inbox locale once per channel and wants every notification in that locale regardless of who submitted the form.
 
 ## Where everything lives
 
@@ -79,12 +68,8 @@ django-email/
 │   │   ├── booking_confirmation.{html,txt}
 │   │   ├── booking_admin_notification.{html,txt}
 │   │   └── contact_form_submission.{html,txt}
-│   ├── locale/{en,pl,de}/LC_MESSAGES/
-│   │   └── django.po           translations
-│   └── settings.py
-│       BOOKING_CONFIRMATION_EMAIL_TEMPLATE_PATH
-│       BOOKING_ADMIN_NOTIFICATION_EMAIL_TEMPLATE_PATH
-│       CONTACT_FORM_SUBMISSION_EMAIL_TEMPLATE_PATH
+│   ├── language.py                          resolve_email_language(requested, channel)
+│   └── locale/{en,pl,de}/LC_MESSAGES/       translations
 
 django-contact-forms/
 ├── src/django_contact_forms/
@@ -95,47 +80,40 @@ django-contact-forms/
 │   │   │   └── send_booking_notifications  ← instantiates both subclasses
 │   │   └── contact_form_service.py
 │   │       └── create_submission  ← already accepted language pre-2.1.0
-│   ├── tasks/send_contact_form_email.py
-│   │   └── (Celery wrapper around ContactFormSubmissionEmail)
-│   └── templates/django_contact_forms/email/
-│       (empty — templates moved to django-email in 2.1.0)
+│   └── tasks/send_contact_form_email.py
+│       (Celery wrapper around ContactFormSubmissionEmail)
 ```
 
 ## Operator customization
 
-Three Grappelli screens let operators override subject + intro/closing
-copy per channel + per language without a code deploy:
+Three Grappelli screens let operators override subject + intro / closing copy per channel + per language without a code deploy:
 
-- `[Contact Forms] Booking Confirmation` — booker email
-- `[Contact Forms] Booking Admin Notification` — admin booking alert
-- `[Contact Forms] Submission` — generic form notification
+- **\[Contact Forms\] Booking Confirmation** — booker email
+- **\[Contact Forms\] Booking Admin Notification** — admin booking alert
+- **\[Contact Forms\] Submission** — generic form notification
 
 Each has four fields:
 
 - `channel` (FK) — which channel this applies to
-- `language` (FK, nullable) — `null` = applies to all languages for this
-  channel (fallback); a specific language overrides for that language only
+- `language` (FK, nullable) — `null` = applies to all languages for this channel (fallback); a specific language overrides for that language only
 - `subject` — overrides the gettext default (`_("Your booking is confirmed")`)
 - `intro_copy` — paragraph above the facts table
 - `closing_copy` — paragraph below the meet link
 
-Left blank → the template falls back to the gettext string shipped in
-`locale/{lang}/LC_MESSAGES/django.po`.
+Left blank → the template falls back to the gettext string shipped in `locale/{lang}/LC_MESSAGES/django.po`.
 
 ## Adding a new translated email type
 
 Recipe (mirrors how booking was added):
 
-1. Ship both a `.html` and a `.txt` template in
-   `django_email/templates/{module}/email/{name}.{html,txt}`. Start with
-   `{% load i18n %}` + `{% include 'base/header.html' %}` +
-   `{% include 'base/footer.html' %}`. Wrap every visible string in
-   `{% trans %}` / `{% blocktrans %}`.
+1. Ship both a `.html` and a `.txt` template in `django_email/templates/{module}/email/{name}.{html,txt}`. Start with `{% load i18n %}` + `{% include 'base/header.html' %}` + `{% include 'base/footer.html' %}`. Wrap every visible string in `{% trans %}` / `{% blocktrans %}`.
 
 2. In `django_email/settings.py`, add a path setting:
 
    ```python
-   FOO_EMAIL_TEMPLATE_PATH = getattr(settings, "FOO_EMAIL_TEMPLATE_PATH", "{module}/email/foo")
+   FOO_EMAIL_TEMPLATE_PATH = getattr(
+       settings, "FOO_EMAIL_TEMPLATE_PATH", "{module}/email/foo"
+   )
    ```
 
 3. In `django_email/template.py`, extend `EmailTemplate.TemplateList`:
@@ -145,17 +123,11 @@ Recipe (mirrors how booking was added):
    FOO = settings.FOO_EMAIL_TEMPLATE_PATH
    ```
 
-4. Create an operator-editable model in
-   `django_email/models/{module}/foo.py` with `channel` + `language` +
-   `subject` + copy fields, and `subject_as_dict()` /
-   `variables_as_dict()` methods. Export from `models/__init__.py`. Run
-   `makemigrations django_email`.
+4. Create an operator-editable model in `django_email/models/{module}/foo.py` with `channel` + `language` + `subject` + copy fields, and `subject_as_dict()` / `variables_as_dict()` methods. Export from `models/__init__.py`. Run `makemigrations django_email`.
 
-5. Register in `django_email/admin/{module}/foo.py` (copy an existing
-   `[Contact Forms] Booking Confirmation` admin and rename).
+5. Register in `django_email/admin/{module}/foo.py` (copy an existing `[Contact Forms] Booking Confirmation` admin and rename).
 
-6. Create the `EmailService` subclass in
-   `django_email/service/{module}/foo.py`:
+6. Create the `EmailService` subclass in `django_email/service/{module}/foo.py`:
 
    ```python
    from django.utils.translation import gettext as _
@@ -183,7 +155,9 @@ Recipe (mirrors how booking was added):
 
        def send(self, email: list[str], payload: dict) -> None:
            ctx = self.prepare_context(payload)
-           message, html_message = EmailTemplate(template=EmailTemplate.TemplateList.FOO, context=ctx).render()
+           message, html_message = EmailTemplate(
+               template=EmailTemplate.TemplateList.FOO, context=ctx
+           ).render()
            self.domain.send_email(
                subject=ctx.get("subject", self.get_subject()),
                message=message,
@@ -192,9 +166,7 @@ Recipe (mirrors how booking was added):
            )
    ```
 
-7. Add translations in `django_email/locale/pl/LC_MESSAGES/django.po`
-   (and `en/` as identity). Run
-   `django-admin compilemessages` inside the container.
+7. Add translations in `django_email/locale/pl/LC_MESSAGES/django.po` (and `en/` as identity). Run `django-admin compilemessages` inside the container.
 
 8. Call it from the module that owns the trigger:
 
@@ -224,22 +196,12 @@ def test_booker_email_renders_polish(monkeypatch, channel):
     assert "Zarezerwowaliśmy" in booker_email.alternatives[0][0]
 ```
 
-Patch the Google Calendar backend in booking tests — never hit the live
-API. See `tests/test_service_booking.py` for existing patches.
+Patch the Google Calendar backend in booking tests — never hit the live API. See `tests/test_service_booking.py` for existing patches.
 
 ## Anti-patterns
 
-- **Don't ship per-language template files** (`foo_pl.html`, `foo_en.html`).
-  Use `{% trans %}` + a shared template. Language-specific files break
-  the `EmailService` contract and double the maintenance surface.
-- **Don't hardcode `language="en"` caller-side.** The agreements
-  newsletter signup had this bug pre-1.0.1 — every Polish subscriber got
-  an English confirmation regardless of channel. Fixed in 1.0.1.
-- **Don't bypass `EmailService`.** If you need `activate()`, branding
-  resolution, and per-channel SMTP — they're all in the base class. Write
-  a subclass; don't reimplement.
-- **Don't render emails in a Celery task body.** The task is a thin
-  async wrapper; delegate to an `EmailService` subclass. See
-  `django_contact_forms/tasks/send_contact_form_email.py` for the shape.
-- **Don't return 400 for unsupported languages.** The fallback chain is
-  silent: requested → channel default → `EMAIL_DEFAULT_LANGUAGE`.
+- **Don't ship per-language template files** (`foo_pl.html`, `foo_en.html`). Use `{% trans %}` + a shared template. Language-specific files break the `EmailService` contract and double the maintenance surface.
+- **Don't hardcode `language="en"` caller-side.** The agreements newsletter signup had this bug pre-1.0.1 — every Polish subscriber got an English confirmation regardless of channel. Fixed in 1.0.1.
+- **Don't bypass `EmailService`.** If you need `activate()`, branding resolution, and per-channel SMTP — they're all in the base class. Write a subclass; don't reimplement.
+- **Don't render emails in a Celery task body.** The task is a thin async wrapper; delegate to an `EmailService` subclass. See `django_contact_forms/tasks/send_contact_form_email.py` for the shape.
+- **Don't return 400 for unsupported languages.** The fallback chain is silent: requested → channel default → `EMAIL_DEFAULT_LANGUAGE`.
