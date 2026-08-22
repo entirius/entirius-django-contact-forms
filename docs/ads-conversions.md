@@ -50,8 +50,7 @@ The SDK doesn't run an interactive OAuth flow. Get a refresh token once via a sm
 
 ```python
 @shared_task(queue="contact_forms_conversions", bind=True, max_retries=3, default_retry_delay=300)
-def upload_pending_conversions(self, channel_idx: str) -> dict:
-    ...
+def upload_pending_conversions(self, channel_idx: str) -> dict: ...
 ```
 
 Lazy-imports `ConversionsClient` from `google-ads-sdk` so the task module loads without the `[google-ads]` extra. Schedule it in the consuming service's Celery Beat config:
