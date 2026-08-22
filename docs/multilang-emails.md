@@ -111,9 +111,7 @@ Recipe (mirrors how booking was added):
 2. In `django_email/settings.py`, add a path setting:
 
    ```python
-   FOO_EMAIL_TEMPLATE_PATH = getattr(
-       settings, "FOO_EMAIL_TEMPLATE_PATH", "{module}/email/foo"
-   )
+   FOO_EMAIL_TEMPLATE_PATH = getattr(settings, "FOO_EMAIL_TEMPLATE_PATH", "{module}/email/foo")
    ```
 
 3. In `django_email/template.py`, extend `EmailTemplate.TemplateList`:
@@ -155,9 +153,7 @@ Recipe (mirrors how booking was added):
 
        def send(self, email: list[str], payload: dict) -> None:
            ctx = self.prepare_context(payload)
-           message, html_message = EmailTemplate(
-               template=EmailTemplate.TemplateList.FOO, context=ctx
-           ).render()
+           message, html_message = EmailTemplate(template=EmailTemplate.TemplateList.FOO, context=ctx).render()
            self.domain.send_email(
                subject=ctx.get("subject", self.get_subject()),
                message=message,
