@@ -75,3 +75,10 @@ def test_task_hands_readable_body_to_the_admin_notification():
     assert "Answer:\nKestrel Supply pallets,\nweekly delivery" in form_body
     assert "Consent age: yes" in form_body
     assert "{" not in form_body
+
+
+def test_submission_context_carries_the_form_id():
+    # django-email expands <contact_form_id> in the notification subject with this.
+    ctx = _submission_context(ContactForm(id="482910375562", email="lorem@example.com", body=None))
+
+    assert ctx["form_id"] == "482910375562"

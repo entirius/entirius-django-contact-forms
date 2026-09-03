@@ -56,8 +56,10 @@ def _submission_context(contact_form) -> dict:
     line per field, multi-line values kept — because django-email's stock
     templates print it inside ``<pre>``. ``form_body_rows`` carries the same
     fields as ``BodyRow`` objects for templates that render a table.
+    ``form_id`` feeds the ``<contact_form_id>`` subject token in django-email.
     """
     return {
+        "form_id": contact_form.id,
         "form_email": contact_form.email,
         "form_slug": contact_form.slug or "",
         "form_type": contact_form.type or "",

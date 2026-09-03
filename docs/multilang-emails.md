@@ -102,6 +102,22 @@ Each has four fields:
 
 Left blank → the template falls back to the gettext string shipped in `locale/{lang}/LC_MESSAGES/django.po`.
 
+### `<contact_form_id>` in the submission subject
+
+`[Contact Forms] Submission` understands one token: `<contact_form_id>`,
+substituted with the id of the submission. Put it in `subject` and every
+notification gets its own subject; leave it out and nothing is added.
+
+It matters because Gmail threads by subject. A constant subject collapses every
+submission into one conversation and a busy contact mailbox stops working:
+replies stack on top of each other, and closing one closes all of them.
+
+Substitution happens in django-email, not here — this package only hands over
+the submission id. Versions that do not know the token copy the subject
+verbatim, so `<contact_form_id>` would reach the mailbox as literal text.
+Check that the installed django-email documents the token before typing it
+into a subject.
+
 ## Adding a new translated email type
 
 Recipe (mirrors how booking was added):
