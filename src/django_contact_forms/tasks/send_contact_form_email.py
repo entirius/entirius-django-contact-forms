@@ -28,6 +28,7 @@ from django_utils.api.exceptions import BadRequest
 from process_logger import ProcessLogger
 
 from django_contact_forms.models import ContactForm, ContactFormAttachment
+from django_contact_forms.utils.email_body import body_rows, body_text
 
 
 def _channel_default_language(channel) -> str | None:
@@ -46,6 +47,26 @@ def _contact_form_language(contact_form) -> str | None:
     if contact_form.language and contact_form.language.iso2:
         return contact_form.language.iso2
     return _channel_default_language(contact_form.channel)
+
+
+def _submission_context(contact_form) -> dict:
+    """Template context shared by the admin notification and the client copy.
+
+    ``form_body`` is the submission as readable text — one ``Label: value``
+    line per field, multi-line values kept — because django-email's stock
+    templates print it inside ``<pre>``. ``form_body_rows`` carries the same
+    fields as ``BodyRow`` objects for templates that render a table.
+    ``form_id`` feeds the ``<contact_form_id>`` subject token in django-email.
+    """
+    return {
+        "form_id": contact_form.id,
+        "form_email": contact_form.email,
+        "form_slug": contact_form.slug or "",
+        "form_type": contact_form.type or "",
+        "form_code": contact_form.code or "",
+        "form_body": body_text(contact_form.body),
+        "form_body_rows": body_rows(contact_form.body),
+    }
 
 
 @shared_task(queue="contact_forms")
@@ -84,13 +105,7 @@ def send_contact_form_email(
 
     attachments = list(ContactFormAttachment.objects.filter(pk__in=attachments_pk_list or []))
 
-    submission_context = {
-        "form_email": contact_form.email,
-        "form_slug": contact_form.slug or "",
-        "form_type": contact_form.type or "",
-        "form_code": contact_form.code or "",
-        "form_body": contact_form.body or {},
-    }
+    submission_context = _submission_context(contact_form)
 
     if send_admin:
         _send_admin_notification(logger, contact_form, admin_email, submission_context, attachments)

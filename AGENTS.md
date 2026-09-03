@@ -80,6 +80,7 @@ src/django_contact_forms/
 │   └── upload_pending_conversions.py   # @shared_task(queue="contact_forms_conversions")
 │
 ├── utils/                              # decorators (v1 auth), payloads (marshmallow, v1),
+│                                       # email_body (body -> BodyRow list / text for the admin email),
 │                                       # encrypted_field, v2_errors, workers
 ├── management/commands/                # forms-generate-api-key
 ├── admin/                              # Django admin registrations
@@ -262,6 +263,10 @@ admin notification via `ContactFormSubmissionEmail`; `send_client_copy`
 `CONTACT_FORM_SEND_ADMIN_EMAIL` in v1. Deprecated kwargs
 (`template_html_path`, `subject`, `extra_context`) remain in the signature
 for backward compatibility with previously enqueued tasks but are ignored.
+Context handed to django-email (`_submission_context()`): `form_email`,
+`form_slug`, `form_type`, `form_code`, `form_body` (readable text built by
+`utils/email_body.body_text`) and `form_body_rows` (`BodyRow` list from
+`utils/email_body.body_rows`).
 
 **`upload_pending_conversions`** — Queue: `contact_forms_conversions`. Batch-uploads
 queued `OfflineConversionQueue` rows via the `google-ads` extra (lazy import);
