@@ -7,15 +7,16 @@ from functools import wraps
 from django_utils.api.decorators import api_view
 from django_utils.api.exceptions import NotFound, Unauthorized
 
-from django_contact_forms.models import APIKey, Channel
+from django_contact_forms.models import Channel
+from django_contact_forms.utils.api_keys import BOOKING_SCOPE, SUBMIT_SCOPE, key_is_valid
+
+# v1 contract: a booking key submits contact forms too.
+V1_SCOPES = (SUBMIT_SCOPE, BOOKING_SCOPE)
 
 
 def channel_view(view):
     def is_allowed(request):
-        key = request.headers.get("X-API-KEY")
-        channel = request.channel
-        query = APIKey.objects.filter(key=key, channel=channel)
-        return query.exists()
+        return key_is_valid(request, scopes=V1_SCOPES, channel=request.channel)
 
     @wraps(view)
     @api_view
