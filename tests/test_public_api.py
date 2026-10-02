@@ -339,3 +339,12 @@ class TestSubmitThrottle:
 
         # Even with no DEFAULT_THROTTLE_RATES entry, get_rate must return a rate.
         assert ContactFormSubmitThrottle().get_rate()
+
+    @pytest.mark.django_db
+    def test_throttle_cache_keys_hold_no_key_material(self, authed_client, api_key, channel):
+        from django.core.cache import cache
+
+        assert authed_client.get(f"/api/contact-forms/v2/{channel.idx}/form-types/").status_code == 200
+        names = list(cache._cache.keys())  # locmem: the stored names
+        assert names
+        assert not [name for name in names if api_key.key in name]

@@ -13,6 +13,7 @@ from rest_framework.test import APIClient
 
 from django_contact_forms.models import APIKey, Booking, ContactForm, Lead
 from django_contact_forms.services.calendar.backends.base import BackendEventResult
+from tests.conftest import import_keys_into_access
 from tests.factories import APIKeyFactory, BookingConfigFactory, ChannelFactory, enable_global_settings
 
 
@@ -30,6 +31,7 @@ def _setup_channel():
     BookingConfigFactory(channel=channel)
     raw_key = "raw-booking-key-xyz"
     APIKey.objects.create(channel=channel, key=raw_key, scope=APIKey.Scope.BOOKING)
+    import_keys_into_access()
     return channel, raw_key
 
 
@@ -61,6 +63,7 @@ def test_booking_create_400_when_disabled_globally():
     channel = ChannelFactory()
     BookingConfigFactory(channel=channel)
     APIKey.objects.create(channel=channel, key="k", scope=APIKey.Scope.BOOKING)
+    import_keys_into_access()
     client = APIClient()
     client.credentials(HTTP_X_API_KEY="k")
     when = _next_weekday()
