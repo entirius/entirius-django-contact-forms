@@ -5,9 +5,10 @@
 import os
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from django_contact_forms.models import APIKey
+from django_contact_forms.utils.api_keys import SUBMIT_SCOPE, access_installed, token_command
 
 
 class Command(BaseCommand):
@@ -17,6 +18,8 @@ class Command(BaseCommand):
         parser.add_argument("--file_path", type=str, help="(Optional) path to file where key will be saved")
 
     def handle(self, *args, **options):
+        if access_installed():
+            raise CommandError(f"Keys are access tokens now: {token_command(SUBMIT_SCOPE)}")
         file_path = options["file_path"]
         if file_path is None:
             dir_path = os.path.join(settings.DATA_DIR, "tmp/api-key/")
