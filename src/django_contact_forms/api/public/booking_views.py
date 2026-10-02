@@ -12,9 +12,9 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
 
 from django_contact_forms.api.public.authentication import BookingAPIKeyAuthentication
+from django_contact_forms.api.public.throttling import BookingThrottle
 from django_contact_forms.schemas.requests.booking import BookingCreateRequest
 from django_contact_forms.schemas.responses.booking import (
     BookingCreateResponse,
@@ -40,42 +40,13 @@ _PUBLIC_ERRORS = {
 }
 
 
-class _BookingThrottle(AnonRateThrottle):
-    """Per-IP throttle for the public booking endpoint. Without this a leaked
-    booking key allows unbounded slot exhaustion + Google Calendar quota burn.
-
-    Configure via ``DEFAULT_THROTTLE_RATES["contact_forms_booking"]`` in service
-    settings. Defaults to 10/hour when the scope isn't configured — we never
-    want this endpoint completely unthrottled in production.
-    """
-
-    scope = "contact_forms_booking"
-    # NOT a class-level `rate` — DRF's SimpleRateThrottle.__init__ skips
-    # get_rate() when `rate` is set, which would make the service override dead.
-    fallback_rate = "10/hour"
-
-    def __init__(self) -> None:
-        self.rate = self.get_rate()
-        super().__init__()
-
-    def get_rate(self) -> str:
-        # Honour service-level override if present, fall back to class default.
-        try:
-            rate = super().get_rate()
-        except Exception:  # noqa: BLE001 — DRF raises ImproperlyConfigured when scope is unset
-            return self.fallback_rate
-        if not rate or "/" not in rate:
-            return self.fallback_rate
-        return rate
-
-
 @extend_schema_view(list=extend_schema(tags=["Bookings (public)"]), create=extend_schema(tags=["Bookings (public)"]))
 class BookingViewSet(viewsets.ViewSet):
     """X-API-KEY authentication scoped to ``booking`` keys (defense in depth)."""
 
     authentication_classes = [BookingAPIKeyAuthentication]
     permission_classes = [AllowAny]
-    throttle_classes = [_BookingThrottle]
+    throttle_classes = [BookingThrottle]
 
     @extend_schema(
         summary="List available booking slots",

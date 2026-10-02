@@ -9,13 +9,34 @@ exhaustion and quota burn on the upstream email/calendar APIs. The class-level
 ``fallback_rate`` is the safety net — a missing ``DEFAULT_THROTTLE_RATES``
 entry must never produce an unthrottled endpoint.
 
+No cache key ever holds key material. Legacy path: one bucket per key, named by
+the first 16 hex chars of its SHA-256. Access path (the key is an access token,
+``request.access_token``): widget keys ship to every browser, so a single
+per-key bucket would let anyone holding the key silence the shop's form. There
+it is two layers: a per-visitor bucket ``token:<pk>:<client ident>`` at the
+scope's rate, then a per-token ceiling (scope ``<scope>_token``, unconfigured
+20 × the visitor rate) that still caps a key replayed from many addresses. The ceiling
+counts only requests the visitor bucket let through — one address cannot spend
+it with refused requests. The client ident is DRF's ``get_ident`` (trusts
+``X-Forwarded-For`` unless ``NUM_PROXIES`` is set); the ceiling is what holds
+when it is spoofed.
+
 NOTE: the fallback must NOT live in a class-level ``rate`` attribute — DRF's
 ``SimpleRateThrottle.__init__`` only calls ``get_rate()`` when ``rate`` is
 unset, so a class ``rate`` silently disables the ``DEFAULT_THROTTLE_RATES``
 service override. ``__init__`` resolves the rate explicitly instead.
 """
 
+from hashlib import sha256
+
 from rest_framework.throttling import AnonRateThrottle
+
+CEILING_FACTOR = 20
+
+
+def key_fingerprint(key: str) -> str:
+    """A key's bucket name on the legacy path: never the key itself."""
+    return sha256(key.encode()).hexdigest()[:16]
 
 
 class _ScopedAnonThrottle(AnonRateThrottle):
@@ -36,21 +57,85 @@ class _ScopedAnonThrottle(AnonRateThrottle):
             return self.fallback_rate
         return rate
 
+
+class _TokenCeilingThrottle(_ScopedAnonThrottle):
+    """One bucket per access token, across every visitor; unconfigured, 20 × the visitor's resolved rate."""
+
+    def __init__(self, visitor_rate: str) -> None:
+        count, period = visitor_rate.split("/", 1)
+        self.fallback_rate = f"{int(count) * CEILING_FACTOR}/{period}"
+        super().__init__()
+
     def get_cache_key(self, request, view) -> str:
-        # Key the bucket by API key, not client IP. APIKeyAuthentication leaves
-        # request.user as AnonymousUser, so the default AnonRateThrottle would
-        # bucket by IP — which neither caps a leaked key replayed from many IPs
-        # (the threat this throttle exists for) nor spares clients behind shared
-        # NAT. The X-API-KEY value is already a hash, safe to use as the ident.
-        ident = request.headers.get("X-API-KEY") or self.get_ident(request)
+        return self.cache_format % {"scope": self.scope, "ident": f"token:{request.access_token.pk}"}
+
+
+class _WidgetThrottle(_ScopedAnonThrottle):
+    """Per token + visitor on the access path, then the token's ceiling; per key on the legacy path."""
+
+    ceiling: type[_TokenCeilingThrottle]
+    _refused_by: _TokenCeilingThrottle | None = None
+
+    def get_cache_key(self, request, view) -> str:
+        if token := getattr(request, "access_token", None):
+            ident = f"token:{token.pk}:{self.get_ident(request)}"
+        else:
+            ident = self.legacy_ident(request)
         return self.cache_format % {"scope": self.scope, "ident": ident}
 
+    def legacy_ident(self, request) -> str:
+        key = request.headers.get("X-API-KEY")
+        return key_fingerprint(key) if key else self.get_ident(request)
 
-class ContactFormSubmitThrottle(_ScopedAnonThrottle):
+    def allow_request(self, request, view) -> bool:
+        if not super().allow_request(request, view):
+            return False
+        if getattr(request, "access_token", None) is None:
+            return True
+        ceiling = self.ceiling(self.rate)
+        if ceiling.allow_request(request, view):
+            return True
+        self._refused_by = ceiling
+        return False
+
+    def wait(self) -> float | None:
+        return self._refused_by.wait() if self._refused_by else super().wait()
+
+
+class _SubmitCeiling(_TokenCeilingThrottle):
+    scope = "contact_forms_submit_token"
+
+
+class ContactFormSubmitThrottle(_WidgetThrottle):
     scope = "contact_forms_submit"
     fallback_rate = "30/hour"
+    ceiling = _SubmitCeiling
 
 
-class FormTypeListThrottle(_ScopedAnonThrottle):
+class _FormTypeListCeiling(_TokenCeilingThrottle):
+    scope = "contact_forms_form_types_token"
+
+
+class FormTypeListThrottle(_WidgetThrottle):
     scope = "contact_forms_form_types"
     fallback_rate = "120/hour"
+    ceiling = _FormTypeListCeiling
+
+
+class _BookingCeiling(_TokenCeilingThrottle):
+    scope = "contact_forms_booking_token"
+
+
+class BookingThrottle(_WidgetThrottle):
+    """Booking: per client address on the legacy path (as before), per token + visitor on the access path.
+
+    Without it a leaked booking key allows unbounded slot exhaustion + Google
+    Calendar quota burn. Configure via ``DEFAULT_THROTTLE_RATES["contact_forms_booking"]``.
+    """
+
+    scope = "contact_forms_booking"
+    fallback_rate = "10/hour"
+    ceiling = _BookingCeiling
+
+    def legacy_ident(self, request) -> str:
+        return self.get_ident(request)
