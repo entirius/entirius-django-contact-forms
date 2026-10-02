@@ -81,7 +81,7 @@ src/django_contact_forms/
 │
 ├── utils/                              # decorators (v1 auth), payloads (marshmallow, v1),
 │                                       # encrypted_field, v2_errors, workers
-├── management/commands/                # forms-generate-api-key
+├── management/commands/                # forms-generate-api-key (refuses when django-access is installed)
 ├── admin/                              # Django admin registrations
 ├── fixtures/                           # Seed data (channels, API keys, configs, samples)
 ├── templates/django_contact_forms/email/
@@ -154,7 +154,7 @@ Supports multipart/form-data for file uploads. Body can be JSON object or string
 `FormType` catalog; empty/unknown resolves to the channel default. **Client copy:** set
 `body.send_copy=true` and a matching `FormNotificationConfig.send_client_copy=true` to
 have the submitter receive a confirmation copy. Submit is rate-limited
-(`AnonRateThrottle`, scope `contact_forms_submit`).
+(scope `contact_forms_submit`).
 
 ## API v1 Endpoints (Legacy)
 
@@ -315,5 +315,10 @@ entirius-py-process-logger; extras: `bookings` (entirius-py-google-calendar-sdk)
 - Attachments stored in `CUSTOM_FORM_ATTACHMENT_DIR` outside `MEDIA_ROOT` — require download view
 - v1 and v2 coexist: v1 uses marshmallow + function views, v2 uses Pydantic + DRF ViewSets
 - Public v2 API returns `(AnonymousUser, channel)` from auth — access channel via `request.auth`
+- Keys: `utils/api_keys.py` `key_is_valid` is the one check (v1 decorator, v2 auth classes). With `django_access`
+  installed it calls `verify_api_key` (scopes `contact_forms.submit` / `contact_forms.booking`) and never reads
+  `APIKey`; legacy keys work only as imported tokens. Soft dependency — never in `pyproject.toml`.
+- Throttles (`api/public/throttling.py`): never key material in a cache key; with access per token + visitor plus a
+  per-token ceiling (`<scope>_token`) — see `docs/configuration.md` § Throttles.
 - Calendar/Ads SDK imports are lazy behind the `bookings` / `google-ads` extras; without them the
   local-only backend and a no-op uploader are used

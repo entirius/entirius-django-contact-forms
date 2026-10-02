@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Keys verified by django-access when installed: v1 `@channel_view` (scope `contact_forms.submit` or
+  `contact_forms.booking`, as today) and v2 `APIKeyAuthentication` / `BookingAPIKeyAuthentication` (their own scope)
+  check access tokens through `verify_api_key`, channel pin included, never the `APIKey` table. `request.auth` stays
+  the `Channel`. Without django-access nothing changes. `forms-generate-api-key` then refuses and names
+  `access_token create`; the key admin becomes read-only.
+- Throttles never put key material in a cache key: without django-access the per-key bucket is named by a SHA-256
+  prefix of the key. With django-access the public routes bucket per token + client address, under a per-token
+  ceiling (scopes `contact_forms_submit_token`, `contact_forms_form_types_token`, `contact_forms_booking_token`;
+  unconfigured 20 × the visitor rate), so one visitor holding the public key cannot silence the form for all.
+- The key admin shows only the last four characters of a key.
+
 ## 3.0.0 — 2026-07-31
 
 - Initial public release: channel-scoped contact form submissions with JSON

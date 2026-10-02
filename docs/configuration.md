@@ -71,6 +71,29 @@ python manage.py forms-generate-api-key --file_path /path/to/key
 
 The command prints the SHA256 key to stdout and writes it to the file. The generated key has no channel assigned (`channel=NULL`). After generation, link it to a channel via the Django admin (`Contact Forms → API Keys → assign channel`).
 
+With `entirius-django-access` installed, widget keys are access tokens: `forms-generate-api-key` refuses and names
+`manage.py access_token create --scope contact_forms.submit --channel <idx> --application <name>` (booking keys:
+`--scope contact_forms.booking`), the `APIKey` table is never read and its admin is read-only. Existing keys keep
+working as imported legacy tokens (`access_import_legacy_keys`). The admin shows only the last four characters of a key
+on both paths.
+
+## Throttles
+
+Public v2 routes are throttled; rates come from `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`, with a class fallback
+when a scope is missing or malformed. No cache key holds key material.
+
+| Scope | Fallback | Bucket |
+|---|---|---|
+| `contact_forms_submit` | 30/hour | without access: per key (SHA-256 prefix); with access: per token + client address |
+| `contact_forms_form_types` | 120/hour | as above |
+| `contact_forms_booking` | 10/hour | without access: per client address; with access: per token + client address |
+| `contact_forms_submit_token` | 20 × the submit rate (600/hour) | with access only: per token, every address together |
+| `contact_forms_form_types_token` | 20 × the form-types rate (2400/hour) | as above |
+| `contact_forms_booking_token` | 20 × the booking rate (200/hour) | as above |
+
+The per-token ceiling counts only requests the per-visitor bucket let through. The client address is DRF's
+`get_ident`, which trusts `X-Forwarded-For` unless the service sets `NUM_PROXIES`.
+
 ## Channel Setup
 
 Create and configure channels in the Django admin at `Contact Forms → Channels`:
