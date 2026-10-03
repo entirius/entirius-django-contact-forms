@@ -17,6 +17,7 @@ Dual API surface: v1 (legacy function-based) + v2 (DRF ViewSets, Pydantic, drf-s
 | `make check` | lint + format-check (ruff) |
 | `make fix` | auto-fix lint + format |
 | `make test` | test suite (pytest) |
+| `make test-legacy` | test suite without django_access (legacy key path) |
 
 ## Conventions
 

@@ -16,7 +16,7 @@ V1_SCOPES = (SUBMIT_SCOPE, BOOKING_SCOPE)
 
 def channel_view(view):
     def is_allowed(request):
-        return key_is_valid(request, scopes=V1_SCOPES, channel=request.channel)
+        return key_is_valid(request, scopes=V1_SCOPES, channel=request.channel, legacy_any_scope=True)
 
     @wraps(view)
     @api_view

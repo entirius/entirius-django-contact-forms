@@ -348,3 +348,52 @@ class TestSubmitThrottle:
         names = list(cache._cache.keys())  # locmem: the stored names
         assert names
         assert not [name for name in names if api_key.key in name]
+
+
+# === Legacy bucket naming (path-agnostic: access_installed is patched off) ===
+
+LEGACY_TARGET = "django_contact_forms.utils.api_keys.access_installed"
+SLOTS_TARGET = "django_contact_forms.api.public.booking_views.booking_service.get_available_slots"
+
+
+def _legacy_names() -> list[str]:
+    from django.core.cache import cache
+
+    return list(cache._cache.keys())  # locmem: the stored names
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("bucket", "method", "url_tail", "body"),
+    [
+        ("contact_forms_submit", "post", "submit/", {"email": "visitor@example.com"}),
+        ("contact_forms_form_types", "get", "form-types/", None),
+    ],
+)
+def test_legacy_path_buckets_by_a_key_fingerprint(bucket, method, url_tail, body, authed_client, api_key, channel):
+    from django_contact_forms.api.public.throttling import key_fingerprint
+
+    url = f"/api/contact-forms/v2/{channel.idx}/{url_tail}"
+    with patch(LEGACY_TARGET, return_value=False):
+        response = authed_client.post(url, body, format="json") if body else authed_client.get(url)
+    assert response.status_code in (200, 201)
+    names = _legacy_names()
+    assert not [name for name in names if api_key.key in name]
+    assert [name for name in names if name.endswith(f"{bucket}_{key_fingerprint(api_key.key)}")]
+
+
+@pytest.mark.django_db
+def test_legacy_booking_bucket_is_the_client_address(channel):
+    from django_contact_forms.models import APIKey
+    from tests.factories import BookingConfigFactory, enable_global_settings
+
+    enable_global_settings(bookings=True)
+    BookingConfigFactory(channel=channel)
+    key = APIKeyFactory(channel=channel, scope=APIKey.Scope.BOOKING)
+    client = APIClient(REMOTE_ADDR="10.9.8.7")
+    client.credentials(HTTP_X_API_KEY=key.key)
+    with patch(LEGACY_TARGET, return_value=False), patch(SLOTS_TARGET, return_value=[]):
+        assert client.get(f"/api/contact-forms/v2/{channel.idx}/bookings/slots/").status_code == 200
+    names = _legacy_names()
+    assert [name for name in names if name.endswith("contact_forms_booking_10.9.8.7")]
+    assert not [name for name in names if key.key in name]

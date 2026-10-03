@@ -29,15 +29,21 @@ def mask_key(key: str) -> str:
     return f"…{key[-4:]}"
 
 
-def key_is_valid(request, *, scopes: tuple[str, ...], channel: Channel) -> bool:
-    """True when X-API-KEY carries a key for any of ``scopes`` on ``channel``."""
+def key_is_valid(request, *, scopes: tuple[str, ...], channel: Channel, legacy_any_scope: bool = False) -> bool:
+    """True when X-API-KEY carries a key for any of ``scopes`` on ``channel``.
+
+    ``legacy_any_scope`` (v1 decorator): the legacy query ignores the key's scope, as it always did. On the access
+    path a v1 booking token costs one extra ``verify_api_key`` lookup (submit scope is tried first).
+    """
     key = request.META.get(_HEADER)
     if not key:
         return False
     if access_installed():
         return any(_token_is_valid(request, key, scope, channel.idx) for scope in scopes)
-    legacy_scopes = [LEGACY_SCOPES[scope] for scope in scopes]
-    return APIKey.objects.filter(key=key, channel=channel, scope__in=legacy_scopes).exists()
+    query = APIKey.objects.filter(key=key, channel=channel)
+    if not legacy_any_scope:
+        query = query.filter(scope__in=[LEGACY_SCOPES[scope] for scope in scopes])
+    return query.exists()
 
 
 def _token_is_valid(request, key: str, scope: str, channel_idx: str) -> bool:

@@ -15,9 +15,10 @@ the first 16 hex chars of its SHA-256. Access path (the key is an access token,
 per-key bucket would let anyone holding the key silence the shop's form. There
 it is two layers: a per-visitor bucket ``token:<pk>:<client ident>`` at the
 scope's rate, then a per-token ceiling (scope ``<scope>_token``, unconfigured
-20 × the visitor rate) that still caps a key replayed from many addresses. The ceiling
+20 × the throttle's class ``fallback_rate``) that still caps a key replayed from many addresses. The ceiling
 counts only requests the visitor bucket let through — one address cannot spend
-it with refused requests. The client ident is DRF's ``get_ident`` (trusts
+it with refused requests. The reverse asymmetry is deliberate: the visitor bucket records its hit before the
+ceiling is consulted, so a request the ceiling refuses still spends that visitor's own allowance. The client ident is DRF's ``get_ident`` (trusts
 ``X-Forwarded-For`` unless ``NUM_PROXIES`` is set); the ceiling is what holds
 when it is spoofed.
 
@@ -59,10 +60,10 @@ class _ScopedAnonThrottle(AnonRateThrottle):
 
 
 class _TokenCeilingThrottle(_ScopedAnonThrottle):
-    """One bucket per access token, across every visitor; unconfigured, 20 × the visitor's resolved rate."""
+    """One bucket per access token, across every visitor; unconfigured, 20 × the visitor throttle's class fallback."""
 
-    def __init__(self, visitor_rate: str) -> None:
-        count, period = visitor_rate.split("/", 1)
+    def __init__(self, visitor_fallback_rate: str) -> None:
+        count, period = visitor_fallback_rate.split("/", 1)
         self.fallback_rate = f"{int(count) * CEILING_FACTOR}/{period}"
         super().__init__()
 
@@ -92,7 +93,7 @@ class _WidgetThrottle(_ScopedAnonThrottle):
             return False
         if getattr(request, "access_token", None) is None:
             return True
-        ceiling = self.ceiling(self.rate)
+        ceiling = self.ceiling(self.fallback_rate)
         if ceiling.allow_request(request, view):
             return True
         self._refused_by = ceiling

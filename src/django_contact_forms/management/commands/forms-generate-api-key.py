@@ -8,7 +8,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from django_contact_forms.models import APIKey
-from django_contact_forms.utils.api_keys import SUBMIT_SCOPE, access_installed, token_command
+from django_contact_forms.utils.api_keys import BOOKING_SCOPE, SUBMIT_SCOPE, access_installed, token_command
 
 
 class Command(BaseCommand):
@@ -19,7 +19,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if access_installed():
-            raise CommandError(f"Keys are access tokens now: {token_command(SUBMIT_SCOPE)}")
+            raise CommandError(
+                f"Keys are access tokens now: {token_command(SUBMIT_SCOPE)} (booking keys: --scope {BOOKING_SCOPE})"
+            )
         file_path = options["file_path"]
         if file_path is None:
             dir_path = os.path.join(settings.DATA_DIR, "tmp/api-key/")
