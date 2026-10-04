@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Access: the module declares its own access areas on its AppConfig and its admin views (copied from the
+  entirius-django-access defaults; behaviour unchanged).
 - Keys verified by django-access when installed: v1 `@channel_view` (scope `contact_forms.submit` or
   `contact_forms.booking`, as today) and v2 `APIKeyAuthentication` / `BookingAPIKeyAuthentication` (their own scope)
   check access tokens through `verify_api_key`, channel pin included, never the `APIKey` table. `request.auth` stays

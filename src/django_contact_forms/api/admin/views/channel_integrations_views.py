@@ -28,6 +28,7 @@ _ERROR_RESPONSES = {
 class ChannelIntegrationsViewSet(viewsets.ViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "contact_forms.settings"
 
     @extend_schema(
         summary="Retrieve channel integrations state",

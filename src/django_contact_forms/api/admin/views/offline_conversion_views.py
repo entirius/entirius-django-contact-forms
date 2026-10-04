@@ -67,6 +67,7 @@ def _serialize(row: OfflineConversionQueue) -> dict[str, Any]:
 class OfflineConversionViewSet(viewsets.ViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "contact_forms.leads"
 
     @extend_schema(
         summary="List offline conversions",

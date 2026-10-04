@@ -26,6 +26,8 @@ Dual API surface: v1 (legacy function-based) + v2 (DRF ViewSets, Pydantic, drf-s
 - Toolchain: uv + ruff + hatchling + pytest; all config in `pyproject.toml`; `uv.lock` committed.
 - Git flow: `master` (production) + `develop` (integration); changes land via PR; semver tag on `master`.
 - Never rename the Django app `django_contact_forms` — app_label and DB table prefix are a public schema contract.
+- Access: areas live on the AppConfig (`access_areas`, `access_route_rules`), every admin view carries
+  `access_area`; a new admin route without one fails `tests/test_access_ownership.py`.
 - Default: do not commit — git is the user's call.
 
 ## Commit Message Format
