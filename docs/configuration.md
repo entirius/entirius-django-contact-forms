@@ -82,7 +82,7 @@ never displays raw keys): create legacy keys with `forms-generate-api-key` only.
 
 ## Throttles
 
-Public v2 routes are throttled; rates come from `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`, with a class fallback
+Public v2 routes and the v1 `contact_form/` routes (which share the `contact_forms_submit` buckets) are throttled; rates come from `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`, with a class fallback
 when a scope is missing or malformed. No cache key holds key material.
 
 | Scope | Fallback | Bucket |
