@@ -14,8 +14,8 @@
   ceiling (scopes `contact_forms_submit_token`, `contact_forms_form_types_token`, `contact_forms_booking_token`;
   unconfigured 20 × the class fallback rate), so one visitor holding the public key cannot silence the form for all.
 - The key admin shows only the last four characters of a key.
-- v1 `contact_form/` and `contact_form/<type_id>/` share the v2 submit throttle (`contact_forms_submit`, same
-  buckets): 429 with `Retry-After` once spent. They create state and send mail, and accept booking keys.
+- v1 `contact_form/` and `contact_form/<type_id>/` get the same kind of throttle as v2 submit, in buckets of their
+  own (`contact_forms_submit_v1`, ceiling `contact_forms_submit_v1_token`): 429 with `Retry-After` once spent. They create state and send mail, and accept booking keys.
 
 ## 3.0.0 — 2026-07-31
 

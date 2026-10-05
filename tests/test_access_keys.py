@@ -240,12 +240,20 @@ def test_v1_is_throttled_per_token_and_address(path, scope, channel, issue):
         url = f"/api/contact/1/{CHANNEL}/{path}"
         return _client(raw, address).post(url, {"email": "visitor@example.com"})
 
-    with _rates(contact_forms_submit="2/hour", contact_forms_submit_token="100/hour"):
+    with _rates(contact_forms_submit_v1="2/hour", contact_forms_submit_v1_token="100/hour"):
         assert [post("10.0.0.1").status_code for _ in range(2)] == [200, 200]
         refused = post("10.0.0.1")
         assert refused.status_code == 429
         assert "Retry-After" in refused.headers
         assert post("10.0.0.2").status_code == 200
+
+
+@pytest.mark.django_db
+def test_v1_and_v2_submit_spend_separate_buckets(channel, issue):
+    _, raw = issue(SUBMIT_SCOPE)
+    with _rates(contact_forms_submit="1/hour", contact_forms_submit_v1="1/hour"):
+        assert [_v1(raw).status_code for _ in range(2)] == [200, 429]
+        assert _submit(raw).status_code == 201
 
 
 @pytest.mark.django_db

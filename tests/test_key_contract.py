@@ -107,11 +107,12 @@ class TestV1ChannelView:
 @pytest.mark.django_db
 @pytest.mark.usefixtures("_no_admin_email")
 @pytest.mark.parametrize("path", ["contact_form/", "contact_form/question/"])
-def test_v1_routes_share_the_v2_submit_throttle(path, channel, make_api_key):
-    """Both v1 routes create state and send mail: the widget throttle of v2 submit (scope ``contact_forms_submit``)."""
+def test_v1_routes_have_their_own_submit_throttle(path, channel, make_api_key):
+    """Both v1 routes create state and send mail: a widget throttle of their own (``contact_forms_submit_v1``)."""
     client = _client(make_api_key(channel=channel))
     url = f"/api/contact/1/key-channel/{path}"
-    with patch.object(SimpleRateThrottle, "THROTTLE_RATES", {"contact_forms_submit": "2/hour"}):
+    rates = {"contact_forms_submit_v1": "2/hour", "contact_forms_submit": "1/hour"}
+    with patch.object(SimpleRateThrottle, "THROTTLE_RATES", rates):
         assert [client.post(url, SUBMIT_BODY).status_code for _ in range(3)] == [200, 200, 429]
 
 

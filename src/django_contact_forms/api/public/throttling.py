@@ -22,6 +22,9 @@ ceiling is consulted, so a request the ceiling refuses still spends that visitor
 ``X-Forwarded-For`` unless ``NUM_PROXIES`` is set); the ceiling is what holds
 when it is spoofed.
 
+v1 and v2 submit are throttled independently (``contact_forms_submit_v1`` vs
+``contact_forms_submit``): a burst on one API surface never spends the other's budget.
+
 NOTE: the fallback must NOT live in a class-level ``rate`` attribute — DRF's
 ``SimpleRateThrottle.__init__`` only calls ``get_rate()`` when ``rate`` is
 unset, so a class ``rate`` silently disables the ``DEFAULT_THROTTLE_RATES``
@@ -111,6 +114,18 @@ class ContactFormSubmitThrottle(_WidgetThrottle):
     scope = "contact_forms_submit"
     fallback_rate = "30/hour"
     ceiling = _SubmitCeiling
+
+
+class _SubmitV1Ceiling(_TokenCeilingThrottle):
+    scope = "contact_forms_submit_v1_token"
+
+
+class ContactFormSubmitV1Throttle(_WidgetThrottle):
+    """v1 ``contact_form/`` routes: the same kind of throttle as v2 submit, in buckets of their own."""
+
+    scope = "contact_forms_submit_v1"
+    fallback_rate = "30/hour"
+    ceiling = _SubmitV1Ceiling
 
 
 class _FormTypeListCeiling(_TokenCeilingThrottle):

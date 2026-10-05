@@ -82,15 +82,17 @@ never displays raw keys): create legacy keys with `forms-generate-api-key` only.
 
 ## Throttles
 
-Public v2 routes and the v1 `contact_form/` routes (which share the `contact_forms_submit` buckets) are throttled; rates come from `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`, with a class fallback
+Public v2 routes and the v1 `contact_form/` routes are throttled — v1 and v2 submit independently, each in its own buckets; rates come from `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`, with a class fallback
 when a scope is missing or malformed. No cache key holds key material.
 
 | Scope | Fallback | Bucket |
 |---|---|---|
 | `contact_forms_submit` | 30/hour | without access: per key (SHA-256 prefix); with access: per token + client address |
+| `contact_forms_submit_v1` | 30/hour | v1 `contact_form/` routes; as above |
 | `contact_forms_form_types` | 120/hour | as above |
 | `contact_forms_booking` | 10/hour | without access: per client address; with access: per token + client address |
 | `contact_forms_submit_token` | 20 × the submit fallback (600/hour) | with access only: per token, every address together |
+| `contact_forms_submit_v1_token` | 20 × the v1 submit fallback (600/hour) | as above |
 | `contact_forms_form_types_token` | 20 × the form-types fallback (2400/hour) | as above |
 | `contact_forms_booking_token` | 20 × the booking fallback (200/hour) | as above |
 
