@@ -4,24 +4,23 @@
 
 """X-API-KEY authentication for DRF (wraps existing v1 pattern).
 
-Optional ``required_scope`` makes the auth class scope-aware. The default
-APIKeyAuthentication accepts any scope (back-compat for the contact-form
-submit endpoint, which keeps working with all keys including legacy rows
-that default to scope="contact_form"). Scoped subclasses (e.g.
-BookingAPIKeyAuthentication) reject keys that don't match.
+Each class accepts one scope: ``APIKeyAuthentication`` contact-form keys (``contact_forms.submit``),
+``BookingAPIKeyAuthentication`` booking keys (``contact_forms.booking``). The key check is
+``utils.api_keys.key_is_valid`` — an access token when django_access is installed, else the legacy table.
 """
 
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
-from django_contact_forms.models import APIKey, Channel
+from django_contact_forms.models import Channel
+from django_contact_forms.utils.api_keys import BOOKING_SCOPE, LEGACY_SCOPES, SUBMIT_SCOPE, key_is_valid
 
 
 class APIKeyAuthentication(BaseAuthentication):
-    """Default: accepts contact-form-scoped keys (and legacy rows with no scope set)."""
+    """Default: accepts contact-form-scoped keys. ``request.auth`` is the ``Channel`` the views read."""
 
-    required_scope: str = APIKey.Scope.CONTACT_FORM
+    scope: str = SUBMIT_SCOPE
 
     def authenticate_header(self, request):
         return "X-API-KEY"
@@ -40,11 +39,11 @@ class APIKeyAuthentication(BaseAuthentication):
         except Channel.DoesNotExist as exc:
             raise AuthenticationFailed(f"Channel '{channel_idx}' not found.") from exc
 
-        if not APIKey.objects.filter(key=api_key, channel=channel, scope=self.required_scope).exists():
-            raise AuthenticationFailed(f"Invalid API key for scope '{self.required_scope}'.")
+        if not key_is_valid(request, scopes=(self.scope,), channel=channel):
+            raise AuthenticationFailed(f"Invalid API key for scope '{LEGACY_SCOPES[self.scope]}'.")
 
         return (AnonymousUser(), channel)
 
 
 class BookingAPIKeyAuthentication(APIKeyAuthentication):
-    required_scope = APIKey.Scope.BOOKING
+    scope = BOOKING_SCOPE
