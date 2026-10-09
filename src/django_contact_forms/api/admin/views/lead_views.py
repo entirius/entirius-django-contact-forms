@@ -72,6 +72,7 @@ def _serialize(lead: Lead) -> dict:
 class LeadViewSet(viewsets.ViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "contact_forms.leads"
 
     @extend_schema(
         summary="List leads",

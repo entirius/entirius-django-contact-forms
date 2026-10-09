@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Access: the module declares its own access areas on its AppConfig and its admin views (copied from the
+  entirius-django-access defaults; behaviour unchanged).
 - Keys verified by django-access when installed: v1 `@channel_view` (scope `contact_forms.submit` or
   `contact_forms.booking`, as today) and v2 `APIKeyAuthentication` / `BookingAPIKeyAuthentication` (their own scope)
   check access tokens through `verify_api_key`, channel pin included, never the `APIKey` table. `request.auth` stays
@@ -12,6 +14,8 @@
   ceiling (scopes `contact_forms_submit_token`, `contact_forms_form_types_token`, `contact_forms_booking_token`;
   unconfigured 20 × the class fallback rate), so one visitor holding the public key cannot silence the form for all.
 - The key admin shows only the last four characters of a key.
+- v1 `contact_form/` and `contact_form/<type_id>/` get the same kind of throttle as v2 submit, in buckets of their
+  own (`contact_forms_submit_v1`, ceiling `contact_forms_submit_v1_token`): 429 with `Retry-After` once spent. They create state and send mail, and accept booking keys.
 
 ## 3.0.0 — 2026-07-31
 

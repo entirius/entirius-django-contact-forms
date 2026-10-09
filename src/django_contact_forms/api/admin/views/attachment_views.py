@@ -30,6 +30,8 @@ class AttachmentDownloadView(APIView):
 
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "contact_forms.submissions"
+    access_levels = {"GET": "write"}
 
     @extend_schema(
         tags=["Contact Form Submissions"],
