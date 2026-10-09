@@ -27,6 +27,12 @@ All settings are read from Django settings with the defaults shown. Only `PRIVAT
 | `GOOGLE_ADS_OAUTH_CLIENT_SECRET` | `str` | `""` | OAuth2 client secret. |
 | `CONTACT_FORMS_CONVERSIONS_BATCH_SIZE` | `int` | `100` | Max OfflineConversionQueue rows the worker drains per call. |
 
+### Bookings (only when `[bookings]` extra installed)
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `CONTACT_FORMS_CREDENTIALS_DIR` | `str` | `"/app/credentials/"` | Directory of the service-account JSON files. |
+
 Per-channel `customer_id`, `login_customer_id`, conversion-action IDs, and the encrypted `oauth_refresh_token` live on `GoogleAdsConfig` rows (DB, runtime-changeable). Per-deployment secrets stay in Django settings (require redeploy to rotate).
 
 The bundled templates are at `django_contact_forms/email/contact_form_email.{html,txt}` inside the package. Override them by pointing the settings to your own template paths (resolved via Django's template loaders).
@@ -141,3 +147,22 @@ PRIVATE_DIR/
 ```
 
 Set `PRIVATE_DIR` in Django settings before starting the application. The directory is created automatically on first write. Files stored here are not served by Django's static file machinery — implement a custom download view with appropriate access control if submissions need to be retrieved.
+
+## Notification Config
+
+`FormNotificationConfig` controls whether email is sent and to whom for each form submission.
+
+**Fallback chain** (one walk, shared by `should_send_email` and `should_send_client_copy`):
+1. Exact match: `(channel, form_type, slug)`
+2. Type-level: `(channel, form_type, "")`
+3. Channel-level: `(channel, "", "")`
+4. Global: `CONTACT_FORM_SEND_ADMIN_EMAIL` / `CONTACT_FORM_SEND_CLIENT_COPY` setting
+
+`recipient_email` override: if set on the matching config, overrides `channel.admin_email`.
+
+**Client copy:** `send_client_copy` on the matching config, AND `body.send_copy` truthy on
+the submission, AND a non-empty submitter email → the submitter receives a copy rendered by
+django-email's `ContactFormClientCopyEmail` (separate template/subject from the admin one).
+
+**Editable fields** via `update_config`: `form_type`, `slug`, `send_email`,
+`send_client_copy`, `recipient_email` (whitelisted — anything else raises `ValueError`).
