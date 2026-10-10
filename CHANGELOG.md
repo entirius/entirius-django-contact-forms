@@ -19,6 +19,7 @@
 - OpenAPI: explicit tags on the custom lead actions (`transition`, `summary` → `Leads`) and on the offline-conversion
   `retry` (`Offline Conversions`), which fell back to the default tag; the pagination example uses
   `https://api.example.com`. Metadata only.
+- OpenAPI: the `channel_idx` path parameter of the public booking operations is described. Metadata only.
 
 ## 3.0.0 — 2026-07-31
 
