@@ -16,6 +16,10 @@
 - The key admin shows only the last four characters of a key.
 - v1 `contact_form/` and `contact_form/<type_id>/` get the same kind of throttle as v2 submit, in buckets of their
   own (`contact_forms_submit_v1`, ceiling `contact_forms_submit_v1_token`): 429 with `Retry-After` once spent. They create state and send mail, and accept booking keys.
+- OpenAPI: explicit tags on the custom lead actions (`transition`, `summary` → `Leads`) and on the offline-conversion
+  `retry` (`Offline Conversions`), which fell back to the default tag; the pagination example uses
+  `https://api.example.com`. Metadata only.
+- OpenAPI: the `channel_idx` path parameter of the public booking operations is described. Metadata only.
 
 ## 3.0.0 — 2026-07-31
 

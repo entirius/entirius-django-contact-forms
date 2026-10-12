@@ -203,3 +203,53 @@ GET  channels/{channel_idx}/integrations/
 Returns `{channel_idx, google_ads_enabled, bookings_enabled}`. Each flag is the logical AND of `ContactFormsSettings.{flag}` and the per-channel `GoogleAdsConfig.enabled` / `BookingConfig.enabled`. 404 when the channel does not exist.
 
 The CMS hits this once per Lead detail (to gate the Mark-as-Won push-to-Google-Ads hint) and once per Bookings panel load. Operators manage the underlying config in Grappelli, not in the CMS.
+
+## Multi-window working hours
+
+Working hours per channel are defined as ≥1 ``BookingTimeWindow`` rows linked to
+``BookingConfig`` (FK with ``related_name="time_windows"``). Each window has
+``order``, ``start_time``, ``end_time`` (both ``TimeField`` — minute precision).
+Slot generation iterates each window independently; clusters and synthetic FOMO
+busy periods are constrained per-window (never span boundaries).
+Admin edits windows via the inline editor on ``BookingConfigAdmin``
+(e.g., 10:00-12:30 + 16:00-17:00).
+
+API ``Slot`` shape unchanged — public ``/bookings/slots/`` endpoint emits a flat
+list per day; multi-window structure lives only in the config layer.
+
+## FOMO synthetic busy slots
+
+Cosmetic layer that adds fake busy slots on top of real Google Calendar busy
+intervals so a young or low-traffic booking calendar doesn't look empty (which
+itself deters visitors). Three layers in
+`services/calendar/fomo.py`:
+
+1. **Time-decay** — today ×1.5 intensity, tomorrow ×1.3, days 2-6 ×1.0,
+   days 7+ ×0.75. Capped at 80% of slots blocked per day.
+2. **Slot clusters** — 2-4 consecutive synthetic-busy slots per cluster, weighted
+   toward business peak hours (10-12, 13-16). Mirrors how real bookings cluster.
+3. **Day blackouts** — 0-3 full-day blocks within the visible window. Today and
+   tomorrow are always excluded so "fresh availability" urgency works.
+
+Per-day RNG seed = `HMAC-SHA256(SECRET_KEY, channel.idx + day.isoformat())` so the
+layout is stable across page refreshes within a calendar day and rotates
+naturally at midnight. The HMAC construction (rather than a raw `sha256(...)`
+concatenation) is what gives us the SECRET_KEY-keyed determinism; without it,
+anyone scraping `channel.idx` could replay the layout.
+
+**Three `BookingConfig` fields** (Django admin only — no CMS panel):
+
+| Field | Default | Range |
+|---|---|---|
+| `fomo_enabled` | `False` | bool |
+| `fomo_intensity` | `50` | 0-100 (0=off, 50=balanced, 80=aggressive) |
+| `fomo_blackout_full_days` | `1` | 0-3 |
+
+**Integration**: `booking_service.get_available_slots` merges synthetic into the
+real busy list before slot grid generation. `is_slot_free` (race-condition guard
+before `create_event`) consults only the real backend — synthetic intervals
+**never** block an actual booking, only filter visibility. The API response shape
+is unchanged (`available: bool`); no synthetic flag leaks to clients.
+
+Disable per-channel by toggling `fomo_enabled=False`. Disable globally by setting
+`fomo_intensity=0` for every config (or leaving the master toggle off).

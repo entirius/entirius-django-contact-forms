@@ -39,6 +39,8 @@ _PUBLIC_ERRORS = {
     502: {"description": "Calendar provider unavailable"},
 }
 
+_CHANNEL_IDX_PARAM = OpenApiParameter(name="channel_idx", location="path", type=str, description="Channel identifier")
+
 
 @extend_schema_view(list=extend_schema(tags=["Bookings (public)"]), create=extend_schema(tags=["Bookings (public)"]))
 class BookingViewSet(viewsets.ViewSet):
@@ -52,6 +54,7 @@ class BookingViewSet(viewsets.ViewSet):
         summary="List available booking slots",
         description="Returns per-day slot grids over the configured horizon. ?date_from and ?days narrow the window.",
         parameters=[
+            _CHANNEL_IDX_PARAM,
             OpenApiParameter(name="date_from", type=str, description="ISO date (YYYY-MM-DD)"),
             OpenApiParameter(name="days", type=int, description="Number of days to scan (capped by config)"),
         ],
@@ -92,6 +95,7 @@ class BookingViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="Create a booking",
         description="Validates the slot, checks availability one more time, creates the calendar event, and persists ContactForm + Booking + Lead in one transaction.",
+        parameters=[_CHANNEL_IDX_PARAM],
         request=BookingCreateRequest,
         responses={201: BookingCreateResponse, **_PUBLIC_ERRORS},
     )
