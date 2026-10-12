@@ -10,9 +10,10 @@ from django_utils.api.responses import Response
 from process_logger import ProcessLogger
 
 from django_contact_forms import settings
+from django_contact_forms.api.public.throttling import ContactFormSubmitV1Throttle
 from django_contact_forms.models import ContactForm, ContactFormAttachment
 from django_contact_forms.tasks.send_contact_form_email import send_contact_form_email
-from django_contact_forms.utils.decorators import channel_view
+from django_contact_forms.utils.decorators import channel_view, throttled
 from django_contact_forms.utils.exceptions import (
     AttachmentCountLimitReached,
     AttachmentSizeLimitReached,
@@ -107,6 +108,7 @@ def create_contact(request, logger, body: ContactFormPayload, type_id: str = Non
 @csrf_exempt
 @channel_view
 @require_http_method("POST")
+@throttled(ContactFormSubmitV1Throttle)
 @parse_form(ContactFormPayload.Schema)
 def create_contact_form(request, body: ContactFormPayload, *args, **kwargs):
     logger = ProcessLogger("DJANGO_FORMS - create_contact_form")
@@ -116,6 +118,7 @@ def create_contact_form(request, body: ContactFormPayload, *args, **kwargs):
 @csrf_exempt
 @channel_view
 @require_http_method("POST")
+@throttled(ContactFormSubmitV1Throttle)
 @parse_form(ContactFormPayload.Schema)
 def create_contact_form_with_type(request, body: ContactFormPayload, type_id: str, *args, **kwargs):
     logger = ProcessLogger("DJANGO_FORMS - create_contact_form_with_type")

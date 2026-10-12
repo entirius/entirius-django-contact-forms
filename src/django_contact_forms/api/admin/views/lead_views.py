@@ -66,12 +66,11 @@ def _serialize(lead: Lead) -> dict:
     list=extend_schema(tags=["Leads"]),
     retrieve=extend_schema(tags=["Leads"]),
     partial_update=extend_schema(tags=["Leads"]),
-    transition=extend_schema(tags=["Leads"]),
-    summary=extend_schema(tags=["Leads"]),
 )
 class LeadViewSet(viewsets.ViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "contact_forms.leads"
 
     @extend_schema(
         summary="List leads",
@@ -144,6 +143,7 @@ class LeadViewSet(viewsets.ViewSet):
         description="Move a lead through the FSM. Allowed transitions enforced by the service.",
         request=LeadTransitionRequest,
         responses={200: LeadResponse, **_ERROR_RESPONSES},
+        tags=["Leads"],
     )
     def transition(self, request: Request, pk: int, **kwargs) -> Response:
         try:
@@ -175,6 +175,7 @@ class LeadViewSet(viewsets.ViewSet):
         summary="Lead summary by status",
         parameters=[OpenApiParameter(name="channel", type=str)],
         responses={200: LeadSummaryResponse, **_ERROR_RESPONSES},
+        tags=["Leads"],
     )
     def summary(self, request: Request, **kwargs) -> Response:
         rows = lead_service.summary_by_status(channel_idx=request.query_params.get("channel") or None)

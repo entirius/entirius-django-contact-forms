@@ -30,7 +30,7 @@ class ContactFormListResponse(BaseModel):
     count: int = Field(description="Total number of results", examples=[42])
     next: str | None = Field(
         description="URL to next page",
-        examples=["http://localhost:8000/api/contact-forms/v2/admin/submissions/?page=2"],
+        examples=["https://api.example.com/api/contact-forms/v2/admin/submissions/?page=2"],
     )
     previous: str | None = Field(description="URL to previous page", examples=[None])
     results: list[dict] = Field(description="List of contact form submissions")

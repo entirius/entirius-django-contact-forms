@@ -61,6 +61,7 @@ class SubmissionViewSet(viewsets.ViewSet):
 
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "contact_forms.submissions"
 
     @extend_schema(
         summary="List contact form submissions",

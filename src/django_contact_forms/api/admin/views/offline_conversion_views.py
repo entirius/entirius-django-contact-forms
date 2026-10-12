@@ -62,11 +62,11 @@ def _serialize(row: OfflineConversionQueue) -> dict[str, Any]:
 @extend_schema_view(
     list=extend_schema(tags=["Offline Conversions"]),
     retrieve=extend_schema(tags=["Offline Conversions"]),
-    retry=extend_schema(tags=["Offline Conversions"]),
 )
 class OfflineConversionViewSet(viewsets.ViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "contact_forms.leads"
 
     @extend_schema(
         summary="List offline conversions",
@@ -117,6 +117,7 @@ class OfflineConversionViewSet(viewsets.ViewSet):
         ),
         parameters=[OpenApiParameter(name="pk", location=OpenApiParameter.PATH, type=int)],
         responses={200: OfflineConversionResponse, **_ERROR_RESPONSES},
+        tags=["Offline Conversions"],
     )
     def retry(self, request: Request, pk: int, **kwargs) -> Response:
         try:

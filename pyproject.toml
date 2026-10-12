@@ -1,7 +1,21 @@
 [project]
 name = "entirius-django-contact-forms"
-version = "3.0.0"
-description = "Forms Django module for Volkanos — contact forms, bookings, leads, ad-conversion uploads"
+version = "4.0.0"
+description = "Contact forms module for Entirius: channel-scoped submissions, bookings, leads and Google Ads conversion uploads"
+keywords = ["django", "ecommerce", "entirius", "contact-forms", "bookings", "leads", "google-ads"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
 authors = [{ name = "Entirius" }]
 maintainers = [
     { name = "Piotr Brzozowski", email = "piotrb@entirius.com" },
@@ -46,7 +60,11 @@ google-ads = ["entirius-py-google-ads-sdk>=2.0.0"]
 email = ["entirius-django-email>=4.0.1"]
 
 [project.urls]
+Homepage = "https://docs.entirius.com/"
+Documentation = "https://github.com/entirius/entirius-django-contact-forms/tree/develop/docs"
 Repository = "https://github.com/entirius/entirius-django-contact-forms"
+Changelog = "https://github.com/entirius/entirius-django-contact-forms/blob/develop/CHANGELOG.md"
+Issues = "https://github.com/entirius/entirius-django-contact-forms/issues"
 
 [build-system]
 requires = ["hatchling"]
