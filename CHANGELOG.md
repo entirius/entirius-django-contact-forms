@@ -1,5 +1,7 @@
 # Changelog
 
+## 4.1.0rc1 — 2026-10-26
+
 ## 4.0.0 — 2026-10-12
 
 - Access: the module declares its own access areas on its AppConfig and its admin views (copied from the
