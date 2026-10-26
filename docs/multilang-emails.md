@@ -112,11 +112,9 @@ It matters because Gmail threads by subject. A constant subject collapses every
 submission into one conversation and a busy contact mailbox stops working:
 replies stack on top of each other, and closing one closes all of them.
 
-Substitution happens in django-email, not here — this package only hands over
-the submission id. Versions that do not know the token copy the subject
+Substitution happens in django-email 4.3.0 and newer, not here — this package
+only hands over the submission id. Older django-email versions copy the subject
 verbatim, so `<contact_form_id>` would reach the mailbox as literal text.
-Check that the installed django-email documents the token before typing it
-into a subject.
 
 ## Adding a new translated email type
 
