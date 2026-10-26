@@ -21,6 +21,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from django_contact_forms.services import booking_service
+from tests.conftest import import_keys_into_access
 from tests.factories import (
     APIKeyFactory,  # noqa: F401 — parity with neighbour test file
     BookingConfigFactory,
@@ -104,6 +105,7 @@ def test_booking_post_persists_language_fk_pl():
     channel = _setup()
     raw_key = "raw-key-pl"
     APIKey.objects.create(channel=channel, key=raw_key, scope=APIKey.Scope.BOOKING)
+    import_keys_into_access()
     client = APIClient()
     client.credentials(HTTP_X_API_KEY=raw_key)
 
@@ -134,6 +136,7 @@ def test_booking_post_with_unknown_language_leaves_null():
     channel = _setup()
     raw_key = "raw-key-xx"
     APIKey.objects.create(channel=channel, key=raw_key, scope=APIKey.Scope.BOOKING)
+    import_keys_into_access()
     client = APIClient()
     client.credentials(HTTP_X_API_KEY=raw_key)
 
@@ -178,6 +181,7 @@ def test_booker_lang_wins_admin_uses_channel_default():
     channel.save()
     raw_key = "raw-key-mix"
     APIKey.objects.create(channel=channel, key=raw_key, scope=APIKey.Scope.BOOKING)
+    import_keys_into_access()
     client = APIClient()
     client.credentials(HTTP_X_API_KEY=raw_key)
 

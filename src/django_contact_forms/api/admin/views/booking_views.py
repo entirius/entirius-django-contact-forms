@@ -91,6 +91,7 @@ def _parse_datetime_param(raw: str | None) -> datetime | None:
 class BookingViewSet(viewsets.ViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
+    access_area = "contact_forms.submissions"
 
     @extend_schema(
         summary="List bookings",

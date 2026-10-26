@@ -217,3 +217,17 @@ Patch the Google Calendar backend in booking tests — never hit the live API. S
 - **Don't bypass `EmailService`.** If you need `activate()`, branding resolution, and per-channel SMTP — they're all in the base class. Write a subclass; don't reimplement.
 - **Don't render emails in a Celery task body.** The task is a thin async wrapper; delegate to an `EmailService` subclass. See `django_contact_forms/tasks/send_contact_form_email.py` for the shape.
 - **Don't return 400 for unsupported languages.** The fallback chain is silent: requested → channel default → `EMAIL_DEFAULT_LANGUAGE`.
+
+## Language source per email
+
+All templates, translations, and rendering live in **django-email** (`email` extra). This
+module stores the `ContactForm.language` FK and resolves it to an ISO2
+code; the actual render happens inside `django-email EmailService`
+subclasses.
+
+| Email | Language source | Subclass |
+|---|---|---|
+| Booker confirmation | `ContactForm.language` → `channel.default_language` | `BookingConfirmationEmail` |
+| Booking admin notification | `channel.default_language` | `BookingAdminNotificationEmail` |
+| Generic form notification | `channel.default_language` | `ContactFormSubmissionEmail` |
+| Client copy (to submitter) | `ContactForm.language` → `channel.default_language` | `ContactFormClientCopyEmail` |

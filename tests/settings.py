@@ -2,7 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import os
 import tempfile
+from importlib.util import find_spec
 
 import dj_database_url
 
@@ -29,6 +31,9 @@ INSTALLED_APPS = [
     "django_regional",
     "django_contact_forms",
 ]
+# Soft dependency: with django-access importable (zeno) keys are checked as access tokens.
+if find_spec("django_access") and not os.environ.get("ENTIRIUS_TEST_NO_ACCESS"):
+    INSTALLED_APPS.append("django_access")
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
