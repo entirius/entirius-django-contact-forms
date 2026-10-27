@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.1.0 — 2026-10-27
+
+- The admin notification and the client copy carry a readable submission body. `form_body` is text, one
+  `Label: value` line per field (keys humanised, `order_number` → `Order number`; booleans `yes` / `no`, lists and
+  dicts as indented JSON; a multi-line value starts on its own line), instead of the raw body dict.
+  `form_body_rows` carries the same fields as `BodyRow(label, value)` for templates that render a table
+  (`utils/email_body.body_text` / `body_rows`).
+- The email context carries `form_id` (the submission id), which django-email substitutes for `<contact_form_id>`
+  in the notification subject, so every submission gets its own mail thread.
+- Both need django-email 4.3.0 to show: older versions print `form_body` in their `<pre>` block, ignore
+  `form_body_rows` and copy a subject holding `<contact_form_id>` verbatim. The `email` extra still allows
+  `entirius-django-email>=4.0.1`.
+
 ## 4.0.0 — 2026-10-12
 
 - Access: the module declares its own access areas on its AppConfig and its admin views (copied from the
