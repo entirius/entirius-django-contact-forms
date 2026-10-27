@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.1.0rc1 — 2026-10-26
+## 4.1.0 — 2026-10-27
 
 - The admin notification and the client copy carry a readable submission body. `form_body` is text, one
   `Label: value` line per field (keys humanised, `order_number` → `Order number`; booleans `yes` / `no`, lists and
