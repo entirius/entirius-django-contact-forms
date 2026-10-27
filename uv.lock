@@ -556,7 +556,7 @@ wheels = [
 
 [[package]]
 name = "entirius-django-contact-forms"
-version = "4.0.0"
+version = "4.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "amqp" },

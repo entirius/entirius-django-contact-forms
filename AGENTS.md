@@ -81,6 +81,7 @@ src/django_contact_forms/
 │   └── upload_pending_conversions.py   # @shared_task(queue="contact_forms_conversions")
 │
 ├── utils/                              # decorators (v1 auth), payloads (marshmallow, v1),
+│                                       # email_body (body -> BodyRow list / text for the admin email),
 │                                       # encrypted_field, v2_errors, workers
 ├── management/commands/                # forms-generate-api-key (refuses when django-access is installed)
 ├── admin/                              # Django admin registrations
