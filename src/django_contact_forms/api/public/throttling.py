@@ -9,18 +9,20 @@ exhaustion and quota burn on the upstream email/calendar APIs. The class-level
 ``fallback_rate`` is the safety net — a missing ``DEFAULT_THROTTLE_RATES``
 entry must never produce an unthrottled endpoint.
 
-No cache key ever holds key material. Legacy path: one bucket per key, named by
-the first 16 hex chars of its SHA-256. Access path (the key is an access token,
-``request.access_token``): widget keys ship to every browser, so a single
-per-key bucket would let anyone holding the key silence the shop's form. There
-it is two layers: a per-visitor bucket ``token:<pk>:<client ident>`` at the
-scope's rate, then a per-token ceiling (scope ``<scope>_token``, unconfigured
-20 × the throttle's class ``fallback_rate``) that still caps a key replayed from many addresses. The ceiling
-counts only requests the visitor bucket let through — one address cannot spend
-it with refused requests. The reverse asymmetry is deliberate: the visitor bucket records its hit before the
-ceiling is consulted, so a request the ceiling refuses still spends that visitor's own allowance. The client ident is DRF's ``get_ident`` (trusts
-``X-Forwarded-For`` unless ``NUM_PROXIES`` is set); the ceiling is what holds
-when it is spoofed.
+No cache key ever holds key material. Both paths use the same two layers, so one person holding the public
+widget key (it ships to every browser) cannot silence the shop's form for everyone: a per-visitor bucket at the
+scope's rate, then a per-key ceiling (scope ``<scope>_token``, unconfigured 20 × the throttle's class
+``fallback_rate``) that still caps a key replayed from many addresses. Access path (the key is an access token,
+``request.access_token``): visitor bucket ``token:<pk>:<client ip>``, ceiling ``token:<pk>``. Legacy path: visitor
+bucket ``<fingerprint>:<client ip>``, ceiling ``<fingerprint>``, the fingerprint being the first 16 hex chars of the
+key's SHA-256. The ceiling counts only requests the visitor bucket let through — one address cannot spend it with
+refused requests. The reverse asymmetry is deliberate: the visitor bucket records its hit before the ceiling is
+consulted, so a request the ceiling refuses still spends that visitor's own allowance.
+
+The client IP comes from ``django_utils.api.client_ip.get_client_ip``: ``settings.CLIENT_IP_HEADER`` (e.g.
+``HTTP_CF_CONNECTING_IP``) when set and present, otherwise DRF's ``get_ident``, which trusts ``X-Forwarded-For``
+unless ``NUM_PROXIES`` is set. A service behind a proxy MUST set one of the two; the ceiling is what holds when the
+address is spoofed.
 
 v1 and v2 submit are throttled independently (``contact_forms_submit_v1`` vs
 ``contact_forms_submit``): a burst on one API surface never spends the other's budget.
@@ -33,6 +35,7 @@ service override. ``__init__`` resolves the rate explicitly instead.
 
 from hashlib import sha256
 
+from django_utils.api.client_ip import ClientIPThrottleMixin
 from rest_framework.throttling import AnonRateThrottle
 
 CEILING_FACTOR = 20
@@ -43,7 +46,15 @@ def key_fingerprint(key: str) -> str:
     return sha256(key.encode()).hexdigest()[:16]
 
 
-class _ScopedAnonThrottle(AnonRateThrottle):
+def _key_ident(request) -> str | None:
+    """The bucket name of the request's key: access token pk, else key fingerprint; None without a key."""
+    if token := getattr(request, "access_token", None):
+        return f"token:{token.pk}"
+    key = request.headers.get("X-API-KEY")
+    return key_fingerprint(key) if key else None
+
+
+class _ScopedAnonThrottle(ClientIPThrottleMixin, AnonRateThrottle):
     fallback_rate = "60/hour"
 
     def __init__(self) -> None:
@@ -63,7 +74,7 @@ class _ScopedAnonThrottle(AnonRateThrottle):
 
 
 class _TokenCeilingThrottle(_ScopedAnonThrottle):
-    """One bucket per access token, across every visitor; unconfigured, 20 × the visitor throttle's class fallback."""
+    """One bucket per key, across every visitor; unconfigured, 20 × the visitor throttle's class fallback."""
 
     def __init__(self, visitor_fallback_rate: str) -> None:
         count, period = visitor_fallback_rate.split("/", 1)
@@ -71,30 +82,25 @@ class _TokenCeilingThrottle(_ScopedAnonThrottle):
         super().__init__()
 
     def get_cache_key(self, request, view) -> str:
-        return self.cache_format % {"scope": self.scope, "ident": f"token:{request.access_token.pk}"}
+        return self.cache_format % {"scope": self.scope, "ident": _key_ident(request)}
 
 
 class _WidgetThrottle(_ScopedAnonThrottle):
-    """Per token + visitor on the access path, then the token's ceiling; per key on the legacy path."""
+    """Per key + client IP, then the key's ceiling."""
 
     ceiling: type[_TokenCeilingThrottle]
     _refused_by: _TokenCeilingThrottle | None = None
 
     def get_cache_key(self, request, view) -> str:
-        if token := getattr(request, "access_token", None):
-            ident = f"token:{token.pk}:{self.get_ident(request)}"
-        else:
-            ident = self.legacy_ident(request)
+        ident = self.get_ident(request)
+        if key_ident := _key_ident(request):
+            ident = f"{key_ident}:{ident}"
         return self.cache_format % {"scope": self.scope, "ident": ident}
-
-    def legacy_ident(self, request) -> str:
-        key = request.headers.get("X-API-KEY")
-        return key_fingerprint(key) if key else self.get_ident(request)
 
     def allow_request(self, request, view) -> bool:
         if not super().allow_request(request, view):
             return False
-        if getattr(request, "access_token", None) is None:
+        if _key_ident(request) is None:
             return True
         ceiling = self.ceiling(self.fallback_rate)
         if ceiling.allow_request(request, view):
@@ -143,7 +149,7 @@ class _BookingCeiling(_TokenCeilingThrottle):
 
 
 class BookingThrottle(_WidgetThrottle):
-    """Booking: per client address on the legacy path (as before), per token + visitor on the access path.
+    """Booking: per key + client address, under the key's ceiling.
 
     Without it a leaked booking key allows unbounded slot exhaustion + Google
     Calendar quota burn. Configure via ``DEFAULT_THROTTLE_RATES["contact_forms_booking"]``.
@@ -152,6 +158,3 @@ class BookingThrottle(_WidgetThrottle):
     scope = "contact_forms_booking"
     fallback_rate = "10/hour"
     ceiling = _BookingCeiling
-
-    def legacy_ident(self, request) -> str:
-        return self.get_ident(request)
