@@ -15,10 +15,12 @@ if not PRIVATE_DIR:
     raise OSError("Setting PRIVATE_DIR is not set. Default should be '/private'.")
 CUSTOM_FORM_ATTACHMENT_DIR = os.path.join(PRIVATE_DIR, "contact_form_attachments/")
 
-# Max size of json field in MB
-FORMS_MAX_JSON_MB_SIZE = getattr(settings, "FORMS_MAX_JSON_MB_SIZE", 50)
-FORMS_MAX_ATTACHMENT_MB_SIZE = getattr(settings, "FORMS_MAX_ATTACHMENT_MB_SIZE", 50)
-FORMS_MAX_ATTACHMENT_COUNT = getattr(settings, "FORMS_MAX_ATTACHMENT_COUNT", 10)
+# Submission limits for a public, unauthenticated form. Services with a real need raise them in settings.
+# Max size of json field in MB (attachments are multipart files, never inline in the JSON body)
+FORMS_MAX_JSON_MB_SIZE = getattr(settings, "FORMS_MAX_JSON_MB_SIZE", 1)
+# Max total size of all attachments of one submission in MB
+FORMS_MAX_ATTACHMENT_MB_SIZE = getattr(settings, "FORMS_MAX_ATTACHMENT_MB_SIZE", 10)
+FORMS_MAX_ATTACHMENT_COUNT = getattr(settings, "FORMS_MAX_ATTACHMENT_COUNT", 3)
 
 
 DEFAULT_FROM_EMAIL_CONTACT_FORM = getattr(settings, "DEFAULT_FROM_EMAIL_CONTACT_FORM", None)
