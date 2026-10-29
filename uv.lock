@@ -623,7 +623,7 @@ requires-dist = [
     { name = "drf-spectacular", specifier = ">=0.27" },
     { name = "entirius-django-email", marker = "extra == 'email'", specifier = ">=4.0.1" },
     { name = "entirius-django-regional", specifier = ">=2.0.1" },
-    { name = "entirius-django-utils", specifier = ">=2.4.1" },
+    { name = "entirius-django-utils", specifier = ">=2.4.2" },
     { name = "entirius-py-google-ads-sdk", marker = "extra == 'google-ads'", specifier = ">=2.0.0" },
     { name = "entirius-py-google-calendar-sdk", marker = "extra == 'bookings'", specifier = ">=2.0.0" },
     { name = "entirius-py-idx-normalizator", specifier = ">=2.0.0" },
@@ -680,7 +680,7 @@ wheels = [
 
 [[package]]
 name = "entirius-django-utils"
-version = "2.4.1"
+version = "2.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -698,9 +698,9 @@ dependencies = [
     { name = "python-slugify" },
     { name = "webargs" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/89/0508fea691010fc2d47dddea2eade39d62dc88fb6002797b0941100ac6c9/entirius_django_utils-2.4.1.tar.gz", hash = "sha256:99438fb9f2cd1b2b05743bf81d219b047ef5e695ffe8696091a9c407ed35b4d1", size = 93879, upload-time = "2026-10-29T12:59:56.813Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/40/d0/8371c71ddc752ca068c76848375ab417d07b49a0253ba396e427b09dc712/entirius_django_utils-2.4.2.tar.gz", hash = "sha256:a4965d52355bcb9b54d028de15daae2ce17b64a13d8752e3ddc30b17190b8996", size = 95709, upload-time = "2026-10-29T13:17:42.899Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0e/15/e05aa951a541b297b052259c43bb66420c12174f372a7fd10c253beb8797/entirius_django_utils-2.4.1-py3-none-any.whl", hash = "sha256:91a1bcad83d4ce6a72ee7f7b90d3ff3f91556b83a0cf821a12f4af1035dcb30f", size = 43265, upload-time = "2026-10-29T12:59:55.747Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/ae/d62d9b57f8ebd9038708ee34223ef2fc66d34409a48f5e40efc86a757ebe/entirius_django_utils-2.4.2-py3-none-any.whl", hash = "sha256:e9cebe31e4292a690c8f554fc2457da92ef4419d6cb04941abc80fea36f9eac6", size = 44018, upload-time = "2026-10-29T13:17:41.778Z" },
 ]
 
 [[package]]

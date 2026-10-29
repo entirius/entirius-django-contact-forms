@@ -38,7 +38,7 @@ dependencies = [
     "pydantic[email]>=2.0",
     "cryptography>=44.0",
     "entirius-django-regional>=2.0.1",
-    "entirius-django-utils>=2.4.1",
+    "entirius-django-utils>=2.4.2",
     "entirius-py-idx-normalizator>=2.0.0",
     "entirius-py-process-logger>=2.0.0",
 ]
