@@ -22,6 +22,11 @@ SUBMIT_SCOPE = "contact_forms.submit"
 BOOKING_SCOPE = "contact_forms.booking"
 
 
+def refusal_body(response) -> dict:
+    """A v2 error body without ``debug_id``: every error response gets a fresh one, so two refusals compare equal."""
+    return {name: value for name, value in response.json().items() if name != "debug_id"}
+
+
 def import_keys_into_access() -> None:
     """With django_access installed keys are tokens: import the legacy rows as a deploy's migrate does."""
     if apps.is_installed("django_access"):

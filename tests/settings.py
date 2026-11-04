@@ -53,6 +53,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "django_utils.api.v2_errors.v2_exception_handler",
 }
 
 TEMPLATES = [

@@ -89,9 +89,10 @@ Status codes:
 | Code | When |
 |---|---|
 | 201 | Created |
-| 400 | Bookings disabled, weekend (when `weekdays_only`), out of hours, in the past, beyond horizon, schema validation |
+| 400 | `VALIDATION_ERROR`: bookings disabled (`Bookings are not available for this channel.`), weekend (when `weekdays_only`), out of hours, in the past, beyond horizon, schema validation; the reason is in `details[].description` |
 | 401 | Missing or wrong API key, or wrong scope |
-| 409 | Slot was free at validation but became busy by the time we tried to book it |
+| 409 | `SLOT_UNAVAILABLE`: slot was free at validation but became busy by the time we tried to book it |
+| 500 | `INTERNAL_ERROR` with a `debug_id`, never the exception text |
 | 502 | Google Calendar API failed |
 
 ## Google Calendar setup

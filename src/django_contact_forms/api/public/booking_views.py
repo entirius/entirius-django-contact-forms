@@ -9,6 +9,8 @@ from datetime import date, datetime
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from pydantic import ValidationError
 from rest_framework import status, viewsets
+from rest_framework.exceptions import APIException
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -30,7 +32,11 @@ from django_contact_forms.services.exceptions import (
     InvalidSlotError,
     SlotUnavailableError,
 )
-from django_contact_forms.utils.v2_errors import raise_pydantic_as_drf, upstream_unavailable_response
+from django_contact_forms.utils.v2_errors import (
+    raise_client_error,
+    raise_pydantic_as_drf,
+    upstream_unavailable_response,
+)
 
 _PUBLIC_ERRORS = {
     400: {"description": "Validation or slot rule error"},
@@ -40,6 +46,17 @@ _PUBLIC_ERRORS = {
 }
 
 _CHANNEL_IDX_PARAM = OpenApiParameter(name="channel_idx", location="path", type=str, description="Channel identifier")
+
+# BookingDisabledError names internal settings (ContactFormsSettings, BookingConfig): a visitor gets this instead.
+_BOOKINGS_OFF = "Bookings are not available for this channel."
+
+
+class SlotTaken(APIException):
+    """409: the slot was booked by someone else between the slot list and this request."""
+
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "The slot is no longer available."
+    default_code = "slot_unavailable"
 
 
 @extend_schema_view(list=extend_schema(tags=["Bookings (public)"]), create=extend_schema(tags=["Bookings (public)"]))
@@ -72,8 +89,7 @@ class BookingViewSet(viewsets.ViewSet):
         try:
             day_grids = booking_service.get_available_slots(channel=channel, date_from=date_from, days=days)
         except BookingDisabledError as exc:
-            # 400 with a static message — operator-facing UI surfaces it; no upstream secrets here.
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            raise DRFValidationError(_BOOKINGS_OFF) from exc
         except CalendarUnavailableError as exc:
             return upstream_unavailable_response(exc, public_message="Calendar provider unavailable")
 
@@ -126,11 +142,11 @@ class BookingViewSet(viewsets.ViewSet):
         try:
             result = booking_service.create_booking(channel=channel, request=booking_request)
         except BookingDisabledError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            raise DRFValidationError(_BOOKINGS_OFF) from exc
         except InvalidSlotError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            raise_client_error(exc)
         except SlotUnavailableError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+            raise SlotTaken(exc.client_message) from exc
         except CalendarUnavailableError as exc:
             return upstream_unavailable_response(exc, public_message="Calendar provider unavailable")
 
