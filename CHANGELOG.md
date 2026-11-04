@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.1.2 — 2026-11-04
 
 - Security: no exception text reaches a v2 response (CodeQL `py/stack-trace-exposure`). The admin list filters
   (submissions, leads, offline conversions, bookings) and the public booking routes raise, and the v2 handler answers
