@@ -11,6 +11,7 @@
   of `{"detail": ...}`; the reason is in `details[0].description` (409: `message`, `error: SLOT_UNAVAILABLE`). Public
   booking routes answer `Bookings are not available for this channel.` when bookings are off, without naming
   `ContactFormsSettings` / `BookingConfig`.
+- CI: the workflow token is read-only (`permissions: contents: read`).
 
 ## 4.1.1 — 2026-10-29
 
