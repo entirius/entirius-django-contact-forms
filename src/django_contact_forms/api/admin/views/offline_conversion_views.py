@@ -26,6 +26,8 @@ from django_contact_forms.schemas.responses.offline_conversion import (
     OfflineConversionResponse,
 )
 from django_contact_forms.services.conversions import queue_service
+from django_contact_forms.services.exceptions import InvalidFilterError
+from django_contact_forms.utils.v2_errors import raise_client_error
 
 _ERROR_RESPONSES = {
     400: {"description": "Validation error (e.g. unknown status filter)"},
@@ -84,8 +86,8 @@ class OfflineConversionViewSet(viewsets.ViewSet):
                 channel_idx=request.query_params.get("channel") or None,
                 status=request.query_params.get("status") or None,
             )
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InvalidFilterError as exc:
+            raise_client_error(exc, location="query")
         paginator = AdminPageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
         return Response(

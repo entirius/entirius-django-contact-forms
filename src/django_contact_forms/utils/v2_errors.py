@@ -8,14 +8,21 @@
 ``ValidationError`` so the v2 exception handler formats it into the structured
 ``{ error, message, debug_id, details[] }`` response that the CMS
 ``useFormErrors`` composable parses for field-level error display.
+
+``raise_client_error`` does the same for a ``ClientError`` a service raised: the message the module wrote for
+the client becomes the 400 body, and no other exception's text can.
 """
 
 import logging
 import uuid
+from typing import NoReturn
 
+from django_utils.api.v2_errors import Location
 from pydantic import ValidationError as PydanticValidationError
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
+
+from django_contact_forms.services.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +34,13 @@ def raise_pydantic_as_drf(exc: PydanticValidationError) -> None:
         field = ".".join(str(loc) for loc in error["loc"]) or "non_field_errors"
         detail.setdefault(field, []).append(error["msg"])
     raise DRFValidationError(detail)
+
+
+def raise_client_error(exc: ClientError, location: Location = "body") -> NoReturn:
+    """Re-raise a service refusal as a DRF ValidationError (400) that carries the message written for the client."""
+    error = DRFValidationError(exc.client_message)
+    error.location = location
+    raise error from exc
 
 
 def internal_error_response(exc: Exception, *, public_message: str = "Internal server error") -> Response:

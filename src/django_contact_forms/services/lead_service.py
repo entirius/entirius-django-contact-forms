@@ -13,7 +13,7 @@ from django.db.models import Count, QuerySet
 from django.utils import timezone
 
 from django_contact_forms.models import ContactForm, Lead
-from django_contact_forms.services.exceptions import InvalidLeadTransitionError
+from django_contact_forms.services.exceptions import InvalidFilterError, InvalidLeadTransitionError
 from django_contact_forms.signals import lead_status_changed
 
 # Whitelist of allowed transitions. Re-opening from terminal states is allowed
@@ -93,9 +93,9 @@ def list_leads(
     leaked in the error.
     """
     if status and status not in Lead.Status.values:
-        raise ValueError(f"Unknown status: {status!r}. Allowed: {sorted(Lead.Status.values)}")
+        raise InvalidFilterError(f"Unknown status: {status!r}. Allowed: {sorted(Lead.Status.values)}")
     if source_type and source_type not in Lead.SourceType.values:
-        raise ValueError(f"Unknown source_type: {source_type!r}. Allowed: {sorted(Lead.SourceType.values)}")
+        raise InvalidFilterError(f"Unknown source_type: {source_type!r}. Allowed: {sorted(Lead.SourceType.values)}")
     qs = Lead.objects.select_related("contact_form", "contact_form__channel").order_by("-contact_date")
     if channel_idx:
         qs = qs.filter(contact_form__channel__idx=channel_idx)

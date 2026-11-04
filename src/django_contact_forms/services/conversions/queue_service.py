@@ -12,6 +12,7 @@ from django.db.models import F, QuerySet
 from django.utils import timezone
 
 from django_contact_forms.models import GoogleAdsConfig, Lead, OfflineConversionQueue, is_google_ads_enabled
+from django_contact_forms.services.exceptions import InvalidFilterError
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ def list_conversions(*, channel_idx: str | None = None, status: str | None = Non
     string produces 400 rather than a FieldError 500 with field-name leakage.
     """
     if status and status not in OfflineConversionQueue.Status.values:
-        raise ValueError(f"Unknown status: {status!r}. Allowed: {sorted(OfflineConversionQueue.Status.values)}")
+        raise InvalidFilterError(f"Unknown status: {status!r}. Allowed: {sorted(OfflineConversionQueue.Status.values)}")
     qs = OfflineConversionQueue.objects.select_related(
         "lead", "lead__contact_form", "lead__contact_form__channel"
     ).order_by("-created_at")
