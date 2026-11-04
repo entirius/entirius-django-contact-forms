@@ -39,13 +39,9 @@ ADMIN_LISTS = [
 
 
 @pytest.fixture(autouse=True)
-def _v2_handler(settings):
-    """The service's handler on v2 paths; DRF's default would re-raise the unhandled exception into the test."""
-    settings.REST_FRAMEWORK = {
-        **settings.REST_FRAMEWORK,
-        "EXCEPTION_HANDLER": "django_utils.api.v2_errors.v2_exception_handler",
-    }
-    cache.clear()  # booking throttle buckets
+def _clear_throttle_cache():
+    """Booking throttle buckets are process-wide."""
+    cache.clear()
     yield
     cache.clear()
 
