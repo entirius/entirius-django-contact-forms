@@ -33,7 +33,7 @@ from rest_framework.throttling import SimpleRateThrottle  # noqa: E402
 
 from django_contact_forms.api.public.throttling import key_fingerprint  # noqa: E402
 from django_contact_forms.models import APIKey  # noqa: E402
-from tests.conftest import BOOKING_SCOPE, SUBMIT_SCOPE  # noqa: E402
+from tests.conftest import BOOKING_SCOPE, SUBMIT_SCOPE, refusal_body  # noqa: E402
 from tests.factories import BookingConfigFactory, ChannelFactory, enable_global_settings  # noqa: E402
 
 CHANNEL, OTHER = "key-channel", "other-channel"
@@ -210,8 +210,8 @@ def _failing_keys(issue, route: str, channel) -> dict[str, str]:
 def test_every_failure_gives_one_response(route, channel, other_channel, issue):
     call = ROUTES[route][0]
     outcomes = {kind: call(raw) for kind, raw in _failing_keys(issue, route, channel).items()}
-    answers = {kind: (response.status_code, response.content) for kind, response in outcomes.items()}
-    assert len(set(answers.values())) == 1, answers
+    answers = {kind: (response.status_code, refusal_body(response)) for kind, response in outcomes.items()}
+    assert all(answer == answers["unknown"] for answer in answers.values()), answers
     assert answers["unknown"][0] == 401
 
 

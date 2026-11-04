@@ -18,7 +18,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework.throttling import SimpleRateThrottle
 
-from tests.conftest import BOOKING_SCOPE
+from tests.conftest import BOOKING_SCOPE, refusal_body
 from tests.factories import BookingConfigFactory, ChannelFactory, FormTypeFactory, enable_global_settings
 
 SUBMIT_BODY = {"email": "visitor@example.com"}
@@ -138,7 +138,7 @@ class TestV2Submit:
         foreign_key = make_api_key(channel=other_channel)
         foreign = _v2_submit(foreign_key)
         assert foreign.status_code == wrong.status_code == 401
-        assert foreign.json() == wrong.json()
+        assert refusal_body(foreign) == refusal_body(wrong)
         assert foreign_key not in foreign.content.decode()
 
     def test_booking_key_is_refused_like_a_wrong_key(self, channel, make_api_key):
@@ -146,7 +146,7 @@ class TestV2Submit:
         booking_key = make_api_key(channel=channel, scope=BOOKING_SCOPE)
         booking = _v2_submit(booking_key)
         assert booking.status_code == wrong.status_code == 401
-        assert booking.json() == wrong.json()
+        assert refusal_body(booking) == refusal_body(wrong)
         assert booking_key not in booking.content.decode()
 
     def test_unknown_channel_is_401(self, channel, make_api_key):
@@ -200,7 +200,7 @@ class TestV2Bookings:
         form_key = make_api_key(channel=booking_channel)
         refused = _slots(form_key)
         assert refused.status_code == wrong.status_code == 401
-        assert refused.json() == wrong.json()
+        assert refusal_body(refused) == refusal_body(wrong)
         assert form_key not in refused.content.decode()
 
     def test_other_channel_booking_key_is_401(self, booking_channel, other_channel, make_api_key):
