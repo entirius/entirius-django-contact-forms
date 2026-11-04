@@ -10,9 +10,9 @@ All settings are read from Django settings with the defaults shown. Only `PRIVAT
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `PRIVATE_DIR` | `str` | **required** | Root directory for private file storage. Raises `EnvironmentError` if unset. |
-| `FORMS_MAX_JSON_MB_SIZE` | `int` | `50` | Maximum size of `ContactForm.body` JSON in MB. Enforced on `save()`. |
-| `FORMS_MAX_ATTACHMENT_MB_SIZE` | `int` | `50` | Maximum total size of all attachments per submission in MB. |
-| `FORMS_MAX_ATTACHMENT_COUNT` | `int` | `10` | Maximum number of file attachments per submission. |
+| `FORMS_MAX_JSON_MB_SIZE` | `int` | `1` | Maximum size of `ContactForm.body` JSON in MB. Enforced on `save()`. |
+| `FORMS_MAX_ATTACHMENT_MB_SIZE` | `int` | `10` | Maximum total size of all attachments per submission in MB. |
+| `FORMS_MAX_ATTACHMENT_COUNT` | `int` | `3` | Maximum number of file attachments per submission. |
 | `DEFAULT_FROM_EMAIL_CONTACT_FORM` | `str \| None` | `None` | From address for outbound notification emails. Falls back to Django's `DEFAULT_FROM_EMAIL` if `None`. |
 | `CONTACT_FORM_SEND_ADMIN_EMAIL` | `bool` | `True` | Global fallback for the admin notification when no `FormNotificationConfig` matches. |
 | `CONTACT_FORM_SEND_CLIENT_COPY` | `bool` | `False` | Global fallback for the copy-to-submitter when no config matches. Per-config `send_client_copy` overrides it. |
@@ -93,17 +93,21 @@ when a scope is missing or malformed. No cache key holds key material.
 
 | Scope | Fallback | Bucket |
 |---|---|---|
-| `contact_forms_submit` | 30/hour | without access: per key (SHA-256 prefix); with access: per token + client address |
+| `contact_forms_submit` | 30/hour | per key + client IP (key = access token pk, or SHA-256 prefix of a legacy key) |
 | `contact_forms_submit_v1` | 30/hour | v1 `contact_form/` routes; as above |
 | `contact_forms_form_types` | 120/hour | as above |
-| `contact_forms_booking` | 10/hour | without access: per client address; with access: per token + client address |
-| `contact_forms_submit_token` | 20 × the submit fallback (600/hour) | with access only: per token, every address together |
+| `contact_forms_booking` | 10/hour | as above |
+| `contact_forms_submit_token` | 20 × the submit fallback (600/hour) | per key, every address together |
 | `contact_forms_submit_v1_token` | 20 × the v1 submit fallback (600/hour) | as above |
 | `contact_forms_form_types_token` | 20 × the form-types fallback (2400/hour) | as above |
 | `contact_forms_booking_token` | 20 × the booking fallback (200/hour) | as above |
 
-The ceiling derives from the class fallback, not from a configured visitor rate: raise the `_token` scope when you raise the visitor rate. It counts only requests the per-visitor bucket let through; the visitor bucket in turn records its hit before the ceiling is consulted. The client address is DRF's
-`get_ident`, which trusts `X-Forwarded-For` unless the service sets `NUM_PROXIES`.
+The ceiling derives from the class fallback, not from a configured visitor rate: raise the `_token` scope when you raise the visitor rate. It counts only requests the per-visitor bucket let through; the visitor bucket in turn records its hit before the ceiling is consulted.
+
+The client IP is `django_utils.api.client_ip.get_client_ip`: `settings.CLIENT_IP_HEADER` (e.g. `HTTP_CF_CONNECTING_IP`)
+when set and present, otherwise DRF's `get_ident`, which trusts `X-Forwarded-For` unless `NUM_PROXIES` is set. Behind
+a proxy set one of them, and set `CLIENT_IP_HEADER` only when the origin is reachable through that proxy alone;
+otherwise a client forges the header and the per-key ceiling is the only cap left.
 
 ## Channel Setup
 

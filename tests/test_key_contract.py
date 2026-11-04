@@ -213,3 +213,97 @@ class TestV2Bookings:
         assert response.status_code == 200
         assert response.json()["days"] == []
         assert get_slots.call_args.kwargs["channel"] == booking_channel
+
+
+# --- Throttle buckets: per client address under a per-key ceiling (either key path) ---
+
+
+def _post_v2(key: str, **extra):
+    return APIClient(**extra, HTTP_X_API_KEY=key).post(
+        "/api/contact-forms/v2/key-channel/submit/", SUBMIT_BODY, format="json"
+    )
+
+
+def _rates(**rates: str):
+    return patch.object(SimpleRateThrottle, "THROTTLE_RATES", rates)
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("_no_admin_email")
+def test_two_addresses_with_one_key_have_separate_buckets(channel, make_api_key):
+    key = make_api_key(channel=channel)
+    with _rates(contact_forms_submit="1/hour", contact_forms_submit_token="100/hour"):
+        assert _post_v2(key, REMOTE_ADDR="10.0.0.1").status_code == 201
+        assert _post_v2(key, REMOTE_ADDR="10.0.0.1").status_code == 429
+        assert _post_v2(key, REMOTE_ADDR="10.0.0.2").status_code == 201
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("_no_admin_email")
+def test_per_key_ceiling_holds_across_addresses(channel, make_api_key):
+    key = make_api_key(channel=channel)
+    with _rates(contact_forms_submit="2/hour", contact_forms_submit_token="3/hour"):
+        codes = [_post_v2(key, REMOTE_ADDR=f"10.0.0.{n}").status_code for n in range(1, 6)]
+        assert codes == [201, 201, 201, 429, 429]
+        assert _post_v2(make_api_key(channel=channel), REMOTE_ADDR="10.0.0.9").status_code == 201
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("_no_admin_email")
+def test_client_ip_header_setting_names_the_visitor(channel, make_api_key, settings):
+    settings.CLIENT_IP_HEADER = "HTTP_CF_CONNECTING_IP"
+    key = make_api_key(channel=channel)
+    with _rates(contact_forms_submit="1/hour", contact_forms_submit_token="100/hour"):
+        first = _post_v2(key, REMOTE_ADDR="172.16.0.1", HTTP_CF_CONNECTING_IP="203.0.113.1")
+        same = _post_v2(key, REMOTE_ADDR="172.16.0.2", HTTP_CF_CONNECTING_IP="203.0.113.1")
+        other = _post_v2(key, REMOTE_ADDR="172.16.0.1", HTTP_CF_CONNECTING_IP="203.0.113.2")
+        assert [first.status_code, same.status_code, other.status_code] == [201, 429, 201]
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("_no_admin_email")
+@pytest.mark.parametrize("path", ["contact_form/", "contact_form/question/"])
+def test_v1_buckets_per_address_under_a_key_ceiling(path, channel, make_api_key, settings):
+    settings.CLIENT_IP_HEADER = "HTTP_CF_CONNECTING_IP"
+    key = make_api_key(channel=channel)
+    url = f"/api/contact/1/key-channel/{path}"
+
+    def post(ip: str):
+        return APIClient(HTTP_X_API_KEY=key, HTTP_CF_CONNECTING_IP=ip).post(url, SUBMIT_BODY)
+
+    with _rates(contact_forms_submit_v1="1/hour", contact_forms_submit_v1_token="2/hour"):
+        assert [post("203.0.113.1").status_code, post("203.0.113.1").status_code] == [200, 429]
+        assert post("203.0.113.2").status_code == 200
+        assert post("203.0.113.3").status_code == 429  # ceiling of 2 spent by two visitors
+
+
+# --- Submission size limits ---
+
+
+def test_submission_limit_defaults_are_tight():
+    from django_contact_forms import settings as module_settings
+
+    assert module_settings.FORMS_MAX_ATTACHMENT_COUNT == 3
+    assert module_settings.FORMS_MAX_ATTACHMENT_MB_SIZE == 10
+    assert module_settings.FORMS_MAX_JSON_MB_SIZE == 1
+
+
+@pytest.mark.django_db
+def test_default_json_limit_is_enforced():
+    from django_contact_forms.utils.exceptions import JSONTooLargeException
+    from tests.factories import ContactFormFactory
+
+    with pytest.raises(JSONTooLargeException):
+        ContactFormFactory(body={"message": "x" * (1024 * 1024 + 1)})
+
+
+@pytest.mark.django_db
+def test_default_attachment_count_limit_is_enforced():
+    from django_contact_forms.utils.exceptions import AttachmentCountLimitReached
+    from tests.factories import ContactFormAttachmentFactory, ContactFormFactory
+
+    form = ContactFormFactory()
+    for _ in range(3):
+        ContactFormAttachmentFactory(contact_form=form)
+    with pytest.raises(AttachmentCountLimitReached):
+        ContactFormAttachmentFactory(contact_form=form)

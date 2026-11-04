@@ -126,7 +126,7 @@ Every other setting has a default — reference in `docs/configuration.md` § Se
 - Keys: `utils/api_keys.py` `key_is_valid` is the one check (v1 decorator, v2 auth classes). With `django_access`
   installed it calls `verify_api_key` (scopes `contact_forms.submit` / `contact_forms.booking`) and never reads
   `APIKey`; legacy keys work only as imported tokens. Soft dependency — never in `pyproject.toml`.
-- Throttles (`api/public/throttling.py`): never key material in a cache key; with access per token + visitor plus a
-  per-token ceiling (`<scope>_token`) — see `docs/configuration.md` § Throttles.
+- Throttles (`api/public/throttling.py`): never key material in a cache key; per key + client IP (`get_client_ip`,
+  `CLIENT_IP_HEADER`) plus a per-key ceiling (`<scope>_token`), on both key paths — see `docs/configuration.md` § Throttles.
 - Calendar/Ads SDK imports are lazy behind the `bookings` / `google-ads` extras; without them the
   local-only backend and a no-op uploader are used

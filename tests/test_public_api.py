@@ -379,11 +379,13 @@ def test_legacy_path_buckets_by_a_key_fingerprint(bucket, method, url_tail, body
     assert response.status_code in (200, 201)
     names = _legacy_names()
     assert not [name for name in names if api_key.key in name]
-    assert [name for name in names if name.endswith(f"{bucket}_{key_fingerprint(api_key.key)}")]
+    fingerprint = key_fingerprint(api_key.key)
+    assert [name for name in names if name.endswith(f"{bucket}_{fingerprint}:127.0.0.1")]
+    assert [name for name in names if name.endswith(f"{bucket}_token_{fingerprint}")]
 
 
 @pytest.mark.django_db
-def test_legacy_booking_bucket_is_the_client_address(channel):
+def test_legacy_booking_bucket_is_key_fingerprint_and_client_address(channel):
     from django_contact_forms.models import APIKey
     from tests.factories import BookingConfigFactory, enable_global_settings
 
@@ -395,5 +397,7 @@ def test_legacy_booking_bucket_is_the_client_address(channel):
     with patch(LEGACY_TARGET, return_value=False), patch(SLOTS_TARGET, return_value=[]):
         assert client.get(f"/api/contact-forms/v2/{channel.idx}/bookings/slots/").status_code == 200
     names = _legacy_names()
-    assert [name for name in names if name.endswith("contact_forms_booking_10.9.8.7")]
+    from django_contact_forms.api.public.throttling import key_fingerprint
+
+    assert [name for name in names if name.endswith(f"contact_forms_booking_{key_fingerprint(key.key)}:10.9.8.7")]
     assert not [name for name in names if key.key in name]

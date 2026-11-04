@@ -1,5 +1,19 @@
 # Changelog
 
+## 4.1.1 — 2026-10-29
+
+- Security: throttle buckets without django-access are per key + client IP, under a per-key ceiling (the scopes
+  `<scope>_token` that the access path already used), like the access path. Before, one bucket per key let anyone
+  holding the public widget key lock the shop's form out for every visitor. The booking routes, per client IP only
+  before, get the same two layers.
+- Security: the client IP comes from `django_utils.api.client_ip.get_client_ip`: `settings.CLIENT_IP_HEADER` (e.g.
+  `HTTP_CF_CONNECTING_IP`) when set, else DRF `get_ident` (trusts `X-Forwarded-For` unless `NUM_PROXIES` is set). A
+  service behind a proxy should set one of them. Needs `entirius-django-utils>=2.4.1`.
+- Behaviour change: lower defaults for a public unauthenticated form. `FORMS_MAX_ATTACHMENT_COUNT` 10 -> 3,
+  `FORMS_MAX_ATTACHMENT_MB_SIZE` 50 -> 10 (total per submission), `FORMS_MAX_JSON_MB_SIZE` 50 -> 1 (attachments are
+  multipart files, not inline in the JSON). Override in settings if a service needs more.
+- Throttle scopes unchanged (rates and fallbacks as in 4.1.0); cache key names changed, so counters restart on upgrade.
+
 ## 4.1.0 — 2026-10-27
 
 - The admin notification and the client copy carry a readable submission body. `form_body` is text, one
