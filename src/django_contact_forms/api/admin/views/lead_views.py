@@ -23,8 +23,8 @@ from django_contact_forms.schemas.responses.lead import (
     LeadSummaryResponse,
 )
 from django_contact_forms.services import lead_service
-from django_contact_forms.services.exceptions import InvalidLeadTransitionError
-from django_contact_forms.utils.v2_errors import raise_pydantic_as_drf
+from django_contact_forms.services.exceptions import InvalidFilterError, InvalidLeadTransitionError
+from django_contact_forms.utils.v2_errors import raise_client_error, raise_pydantic_as_drf
 
 _ERROR_RESPONSES = {
     400: {"description": "Validation or transition error"},
@@ -93,8 +93,8 @@ class LeadViewSet(viewsets.ViewSet):
                 source_type=request.query_params.get("source_type") or None,
                 search=request.query_params.get("search") or None,
             )
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InvalidFilterError as exc:
+            raise_client_error(exc, location="query")
         paginator = AdminPageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
         results = [_serialize(lead) for lead in page]

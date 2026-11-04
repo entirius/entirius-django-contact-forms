@@ -14,6 +14,7 @@ from django_contact_forms.models import (
     ContactFormAttachment,
     FormType,
 )
+from django_contact_forms.services.exceptions import InvalidFilterError
 
 logger = ProcessLogger(process_name="contact_form_service", module="django_contact_forms")
 
@@ -39,7 +40,7 @@ def list_submissions(
     status: str | None = None,
 ) -> QuerySet[ContactForm]:
     if ordering and ordering not in _VALID_ORDERINGS:
-        raise ValueError(f"Invalid ordering: {ordering}")
+        raise InvalidFilterError(f"Invalid ordering: {ordering}")
 
     qs = ContactForm.objects.select_related("channel", "language").prefetch_related("contactformattachment_set")
 

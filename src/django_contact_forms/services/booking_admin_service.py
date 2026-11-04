@@ -15,6 +15,7 @@ from datetime import datetime
 from django.db.models import Q, QuerySet
 
 from django_contact_forms.models import Booking, Lead
+from django_contact_forms.services.exceptions import InvalidFilterError
 
 
 def list_bookings(
@@ -28,11 +29,11 @@ def list_bookings(
     """Bounded QuerySet for the admin list view. Caller paginates.
 
     Validates ``lead_status`` against ``Lead.Status`` before hitting the ORM so
-    an unknown value raises ``ValueError`` (mapped to 400) rather than a
+    an unknown value raises ``InvalidFilterError`` (mapped to 400) rather than a
     ``FieldError`` 500 that leaks field names.
     """
     if lead_status and lead_status not in Lead.Status.values:
-        raise ValueError(f"Unknown lead_status: {lead_status!r}. Allowed: {sorted(Lead.Status.values)}")
+        raise InvalidFilterError(f"Unknown lead_status: {lead_status!r}. Allowed: {sorted(Lead.Status.values)}")
     qs = (
         Booking.objects.select_related("contact_form", "contact_form__channel")
         .prefetch_related("contact_form__leads")

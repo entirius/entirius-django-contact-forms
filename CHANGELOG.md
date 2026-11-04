@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Security: no exception text reaches a v2 response (CodeQL `py/stack-trace-exposure`). The admin list filters
+  (submissions, leads, offline conversions, bookings) and the public booking routes raise, and the v2 handler answers
+  with its envelope: a refusal the module wrote (`ClientError`: an unknown filter value, an invalid or taken slot)
+  keeps its message, anything else is the generic 500 with a `debug_id`. Before, any `ValueError` from below a list
+  service came back as a 400 with its text, and an impossible date in `?date_from` with Python's own message.
+- Behaviour change: those 400 / 409 bodies are the v2 envelope (`error`, `message`, `debug_id`, `details[]`) instead
+  of `{"detail": ...}`; the reason is in `details[0].description` (409: `message`, `error: SLOT_UNAVAILABLE`). Public
+  booking routes answer `Bookings are not available for this channel.` when bookings are off, without naming
+  `ContactFormsSettings` / `BookingConfig`.
+
 ## 4.1.1 — 2026-10-29
 
 - Security: throttle buckets without django-access are per key + client IP, under a per-key ceiling (the scopes

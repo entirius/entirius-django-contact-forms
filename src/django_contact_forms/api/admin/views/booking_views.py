@@ -24,6 +24,8 @@ from django_contact_forms.schemas.responses.booking import (
     LinkedLeadSummary,
 )
 from django_contact_forms.services import booking_admin_service
+from django_contact_forms.services.exceptions import InvalidFilterError
+from django_contact_forms.utils.v2_errors import raise_client_error
 
 _ERROR_RESPONSES = {
     400: {"description": "Validation error (e.g. unknown lead_status filter)"},
@@ -67,21 +69,20 @@ def _serialize(booking: Booking) -> dict[str, Any]:
 
 
 def _parse_datetime_param(raw: str | None) -> datetime | None:
-    """Accept ISO-8601 with or without time. Return None on empty/invalid.
+    """Accept ISO-8601 with or without time. Return None on empty.
 
     A 400 is preferable to silently dropping an invalid filter — raise
-    ValueError so the caller can surface it.
+    InvalidFilterError so the caller can surface it. ``parse_datetime`` raises
+    ValueError on a well-formed but impossible value ("2026-13-01T10:00"); it
+    is caught here so Python's own message never reaches the client.
     """
     if not raw:
         return None
-    parsed = parse_datetime(raw)
-    if parsed is not None:
-        return parsed
-    # Accept bare date ("2026-04-20") by delegating to fromisoformat
     try:
-        return datetime.fromisoformat(raw)
+        # Accept bare date ("2026-04-20") by delegating to fromisoformat
+        return parse_datetime(raw) or datetime.fromisoformat(raw)
     except ValueError as exc:
-        raise ValueError(f"Invalid datetime: {raw!r}") from exc
+        raise InvalidFilterError(f"Invalid datetime: {raw!r}") from exc
 
 
 @extend_schema_view(
@@ -120,8 +121,8 @@ class BookingViewSet(viewsets.ViewSet):
                 lead_status=request.query_params.get("lead_status") or None,
                 search=request.query_params.get("search") or None,
             )
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InvalidFilterError as exc:
+            raise_client_error(exc, location="query")
         paginator = AdminPageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
         return Response(

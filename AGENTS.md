@@ -128,5 +128,8 @@ Every other setting has a default — reference in `docs/configuration.md` § Se
   `APIKey`; legacy keys work only as imported tokens. Soft dependency — never in `pyproject.toml`.
 - Throttles (`api/public/throttling.py`): never key material in a cache key; per key + client IP (`get_client_ip`,
   `CLIENT_IP_HEADER`) plus a per-key ceiling (`<scope>_token`), on both key paths — see `docs/configuration.md` § Throttles.
+- v2 errors: a view never puts `str(exc)` in a response or a DRF exception (CodeQL `py/stack-trace-exposure` flags
+  both). A refusal written for the client is a `ClientError` (`services/exceptions.py`); the view calls
+  `raise_client_error(exc)` or answers `exc.client_message`, anything else propagates to the v2 handler's generic 500
 - Calendar/Ads SDK imports are lazy behind the `bookings` / `google-ads` extras; without them the
   local-only backend and a no-op uploader are used

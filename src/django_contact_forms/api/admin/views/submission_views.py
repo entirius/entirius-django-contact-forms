@@ -17,6 +17,8 @@ from django_contact_forms.schemas.requests.status import StatusUpdateRequest
 from django_contact_forms.schemas.responses.attachment import AttachmentResponse
 from django_contact_forms.schemas.responses.submission import ContactFormListResponse, ContactFormResponse
 from django_contact_forms.services import contact_form_service
+from django_contact_forms.services.exceptions import InvalidFilterError
+from django_contact_forms.utils.v2_errors import raise_client_error
 
 _ERROR_RESPONSES = {
     401: {"description": "Authentication required"},
@@ -128,8 +130,8 @@ class SubmissionViewSet(viewsets.ViewSet):
                 ordering=request.query_params.get("ordering") or None,
                 status=request.query_params.get("status") or None,
             )
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InvalidFilterError as exc:
+            raise_client_error(exc, location="query")
 
         paginator = AdminPageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
@@ -189,7 +191,5 @@ class SubmissionViewSet(viewsets.ViewSet):
             submission = contact_form_service.update_status(pk=pk, status=payload.status)
         except ObjectDoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(_build_response(submission))
